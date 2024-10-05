@@ -4,7 +4,7 @@ use std::{fmt::Display, time::Duration};
 use tokio::{sync::watch, task::JoinHandle, time};
 use tracing::{debug, instrument, trace};
 
-use crate::{Diff, Update};
+use crate::collector::{Diff, Update};
 
 const RECEIVE_BYTES: &str =
     r#"sum(unpoller_device_port_receive_bytes_total{name="Office nook switch"}) by (port_name)"#;

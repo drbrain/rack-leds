@@ -1,14 +1,10 @@
 mod args;
-mod diff;
+mod collector;
 mod init;
-mod prometheus;
-mod update;
 
 pub use crate::args::Args;
-pub use crate::diff::Diff;
-pub use crate::update::Update;
-use eyre::{Context, Result};
-use prometheus::Prometheus;
+use collector::Collector;
+use eyre::Result;
 use tokio::signal::{
     ctrl_c,
     unix::{signal, SignalKind},
@@ -25,15 +21,13 @@ fn main() -> Result<()> {
 
 #[tokio::main]
 async fn tokio_main(args: Args) -> Result<()> {
-    let prometheus = Prometheus::new(&args.source, args.period(), args.timeout())?;
-
-    let (_update, collector) = prometheus.collect();
+    let collector = Collector::new(&args)?;
 
     let ctrl_c = ctrl_c();
     let mut term = signal(SignalKind::terminate())?;
 
     tokio::select! {
-        result = collector => { result.wrap_err("collector error")??; },
+        result = collector.wait() => { result?; },
         _ = ctrl_c => {
             info!("shutdown requested")
         },
