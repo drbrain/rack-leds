@@ -6,16 +6,24 @@ use clap::Parser;
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// Prometheus source
-    #[arg(short, long)]
+    #[arg(short, long, value_name = "URL")]
     pub source: String,
 
     /// Prometheus refresh period
-    #[arg(long, value_parser = secs)]
+    #[arg(long, value_name = "SECONDS", value_parser = secs)]
     period: Option<Duration>,
 
     /// Prometheus query timeout in milliseconds
-    #[arg(long, value_parser = millis)]
+    #[arg(long, value_name = "MILLISECONDS", value_parser = millis)]
     timeout: Option<Duration>,
+
+    /// Frame rate, i.e. number of frames per second
+    #[arg(short, long, value_name = "FLOAT", default_value_t = 60.0)]
+    pub frame_rate: f64,
+
+    /// Tick rate, i.e. number of ticks per second
+    #[arg(long, value_name = "FLOAT", default_value_t = 4.0)]
+    pub tick_rate: f64,
 }
 
 impl Args {

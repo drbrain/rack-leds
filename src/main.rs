@@ -1,6 +1,7 @@
 mod args;
 mod collector;
 mod init;
+mod ui;
 
 pub use crate::args::Args;
 use collector::Collector;
@@ -10,6 +11,7 @@ use tokio::signal::{
     unix::{signal, SignalKind},
 };
 use tracing::info;
+use ui::App;
 
 fn main() -> Result<()> {
     init::tracing();
@@ -23,11 +25,14 @@ fn main() -> Result<()> {
 async fn tokio_main(args: Args) -> Result<()> {
     let collector = Collector::new(&args)?;
 
+    let mut app = App::new(args.tick_rate, args.frame_rate, collector.subscribe())?;
+
     let ctrl_c = ctrl_c();
     let mut term = signal(SignalKind::terminate())?;
 
     tokio::select! {
         result = collector.wait() => { result?; },
+        result = app.run() => { result? },
         _ = ctrl_c => {
             info!("shutdown requested")
         },
