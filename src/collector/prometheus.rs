@@ -1,4 +1,5 @@
 use eyre::{Context, OptionExt, Result};
+use itertools::Itertools;
 use prometheus_http_query::Client;
 use std::{fmt::Display, time::Duration};
 use tokio::{sync::watch, task::JoinHandle, time};
@@ -6,10 +7,8 @@ use tracing::{debug, instrument, trace};
 
 use crate::collector::{Diff, Update};
 
-const RECEIVE_BYTES: &str =
-    r#"sum(unpoller_device_port_receive_bytes_total{name="Office nook switch"}) by (port_name)"#;
-const TRANSMIT_BYTES: &str =
-    r#"sum(unpoller_device_port_transmit_bytes_total{name="Office nook switch"}) by (port_name)"#;
+const RECEIVE_BYTES: &str = r#"sum(rate(ifHCInOctets{instance="10.101.28.3"}[1m])) by (ifIndex)"#;
+const TRANSMIT_BYTES: &str = r#"sum(rate(ifHCOutOctets{instance="10.101.28.3"}[1m])) by (ifIndex)"#;
 
 pub struct Prometheus {
     client: Client,
@@ -93,6 +92,13 @@ impl Prometheus {
             .as_vector()
             .ok_or_eyre("Non-vector query result")?
             .iter()
+            .sorted_by_key(|v| {
+                v.metric()
+                    .get("ifIndex")
+                    .unwrap_or(&"0".to_string())
+                    .parse()
+                    .unwrap_or(0)
+            })
             .map(|v| v.sample().value() as u64)
             .collect();
 
