@@ -14,7 +14,6 @@ use crate::ui::{
 };
 
 pub struct App {
-    updates: watch::Receiver<Update>,
     config: Config,
     tick_rate: f64,
     frame_rate: f64,
@@ -37,10 +36,12 @@ impl App {
     pub fn new(tick_rate: f64, frame_rate: f64, updates: watch::Receiver<Update>) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
-            updates,
             tick_rate,
             frame_rate,
-            components: vec![Box::new(Home::new()), Box::new(FpsCounter::default())],
+            components: vec![
+                Box::new(Home::new(updates)),
+                Box::new(FpsCounter::default()),
+            ],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,

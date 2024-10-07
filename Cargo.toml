@@ -9,6 +9,7 @@ edition = "2021"
 better-panic = "0.3.0"
 clap = { version = "4.5.19", features = ["derive"] }
 color-eyre = "0.6.3"
+colorgrad = "0.7.0"
 config = "0.14.0"
 crossterm = { version = "0.28.1", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"
@@ -16,8 +17,10 @@ directories = "5.0.1"
 eyre = "0.6.12"
 futures = "0.3.30"
 human-panic = "2.0.1"
+itertools = "0.13.0"
 json5 = "0.4.1"
 libc = "0.2.159"
+palette = "0.7.6"
 pretty_assertions = "1.4.0"
 prometheus-http-query = "0.8.3"
 ratatui = { version = "0.28.1", features = ["serde", "macros"] }

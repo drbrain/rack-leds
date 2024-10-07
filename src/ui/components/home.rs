@@ -1,18 +1,25 @@
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{mpsc::UnboundedSender, watch};
 
-use crate::ui::{widgets::Display, Action, Component, Config};
+use crate::{
+    collector::Update,
+    ui::{widgets::Display, Action, Component, Config},
+};
 
-#[derive(Default)]
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
+    updates: watch::Receiver<Update>,
 }
 
 impl Home {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(updates: watch::Receiver<Update>) -> Self {
+        Self {
+            command_tx: Default::default(),
+            config: Default::default(),
+            updates,
+        }
     }
 }
 
@@ -41,13 +48,15 @@ impl Component for Home {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
+        let update = self.updates.borrow().clone();
+
         let [status, display_body] =
             Layout::vertical([Constraint::Length(1), Constraint::Length(13)]).areas(area);
 
         let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display_body);
 
         frame.render_widget(Paragraph::new("rack-leds"), status);
-        frame.render_widget(Display::new(), display);
+        frame.render_widget(Display::new(&update), display);
 
         Ok(())
     }
