@@ -10,11 +10,11 @@ use crate::{
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-    updates: watch::Receiver<Update>,
+    updates: watch::Receiver<Vec<Update>>,
 }
 
 impl Home {
-    pub fn new(updates: watch::Receiver<Update>) -> Self {
+    pub fn new(updates: watch::Receiver<Vec<Update>>) -> Self {
         Self {
             command_tx: Default::default(),
             config: Default::default(),

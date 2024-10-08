@@ -6,25 +6,27 @@ pub use diff::Diff;
 use eyre::{Context, Result};
 pub use prometheus::Prometheus;
 use tokio::{sync::watch, task::JoinHandle};
-pub use update::Update;
+pub use update::{Switch, Update};
 
 use crate::Args;
 
 pub struct Collector {
     collector: JoinHandle<Result<()>>,
-    update: watch::Receiver<Update>,
+    update: watch::Receiver<Vec<Update>>,
 }
 
 impl Collector {
     pub fn new(args: &Args) -> Result<Self> {
-        let prometheus = Prometheus::new(&args.source, args.period(), args.timeout())?;
+        let devices = args.config()?.into();
+
+        let prometheus = Prometheus::new(&args.source, args.period(), args.timeout(), devices)?;
 
         let (update, collector) = prometheus.collect();
 
         Ok(Self { collector, update })
     }
 
-    pub fn subscribe(&self) -> watch::Receiver<Update> {
+    pub fn subscribe(&self) -> watch::Receiver<Vec<Update>> {
         self.update.clone()
     }
 

@@ -5,22 +5,23 @@ use std::{fmt::Display, time::Duration};
 use tokio::{sync::watch, task::JoinHandle, time};
 use tracing::{debug, instrument, trace};
 
-use crate::collector::{Diff, Update};
-
-const RECEIVE_BYTES: &str = r#"sum(rate(ifHCInOctets{instance="10.101.28.3"}[1m])) by (ifIndex)"#;
-const TRANSMIT_BYTES: &str = r#"sum(rate(ifHCOutOctets{instance="10.101.28.3"}[1m])) by (ifIndex)"#;
+use crate::{collector::Update, device::Device};
 
 pub struct Prometheus {
     client: Client,
     timeout: i64,
     period: Duration,
-    receive_bytes: Diff,
-    transmit_bytes: Diff,
-    update: watch::Sender<Update>,
+    devices: Vec<Device>,
+    update: watch::Sender<Vec<Update>>,
 }
 
 impl Prometheus {
-    pub fn new(prometheus_url: &str, period: Duration, timeout: Duration) -> Result<Self> {
+    pub fn new(
+        prometheus_url: &str,
+        period: Duration,
+        timeout: Duration,
+        devices: Vec<Device>,
+    ) -> Result<Self> {
         debug!(url = %prometheus_url, ?period, ?timeout, "creating client");
         let client =
             Client::try_from(prometheus_url).wrap_err("unable to create prometheus client")?;
@@ -30,19 +31,18 @@ impl Prometheus {
             .try_into()
             .wrap_err_with(|| format!("timeout {timeout:?} is too long"))?;
 
-        let (update, _) = watch::channel(Update::empty());
+        let (update, _) = watch::channel(vec![]);
 
         Ok(Self {
             client,
             timeout,
             period,
-            receive_bytes: Diff::empty(),
-            transmit_bytes: Diff::empty(),
+            devices,
             update,
         })
     }
 
-    pub fn collect(self) -> (watch::Receiver<Update>, JoinHandle<Result<()>>) {
+    pub fn collect(self) -> (watch::Receiver<Vec<Update>>, JoinHandle<Result<()>>) {
         let update = self.update.subscribe();
 
         let collector = tokio::spawn(self.collector());
@@ -51,7 +51,7 @@ impl Prometheus {
     }
 
     #[instrument(skip_all, fields(target = %self.client.base_url().to_string()))]
-    async fn collector(mut self) -> Result<()> {
+    async fn collector(self) -> Result<()> {
         let mut interval = time::interval(self.period);
         interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
 
@@ -60,28 +60,19 @@ impl Prometheus {
         loop {
             interval.tick().await;
 
-            self.receive_bytes.update(self.query(RECEIVE_BYTES).await?);
+            let mut updates = Vec::with_capacity(self.devices.len());
 
-            self.transmit_bytes
-                .update(self.query(TRANSMIT_BYTES).await?);
+            for device in self.devices.iter() {
+                let update = device.update(&self).await?;
+                updates.push(update);
+            }
 
-            let receive_difference = self.receive_bytes.difference();
-            let transmit_difference = self.transmit_bytes.difference();
-
-            trace!(
-                receive = ?receive_difference,
-                transmit = ?transmit_difference,
-                "updated"
-            );
-
-            let update = Update::new(receive_difference, transmit_difference);
-
-            self.update.send_replace(update);
+            self.update.send_replace(updates);
         }
     }
 
     #[instrument(skip_all, fields(%query))]
-    async fn query(&self, query: impl Display) -> Result<Vec<u64>> {
+    pub async fn query(&self, query: impl Display) -> Result<Vec<u64>> {
         let values: Vec<_> = self
             .client
             .query(query)

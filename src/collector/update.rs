@@ -1,10 +1,15 @@
 #[derive(Clone)]
-pub struct Update {
+pub enum Update {
+    Switch(Switch),
+}
+
+#[derive(Clone)]
+pub struct Switch {
     receive: Vec<u64>,
     transmit: Vec<u64>,
 }
 
-impl Update {
+impl Switch {
     pub fn empty() -> Self {
         Self {
             receive: vec![],

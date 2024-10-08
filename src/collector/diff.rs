@@ -1,19 +1,33 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::RwLock};
 
+#[derive(Default)]
 pub struct Diff {
+    inner: RwLock<Inner>,
+}
+
+impl Diff {
+    pub fn difference(&self) -> Vec<u64> {
+        let inner = self.inner.read().unwrap();
+
+        inner.difference()
+    }
+
+    /// Updates this [`Diff`] only if the update does not match the current value
+    pub fn update(&self, update: Vec<u64>) {
+        let mut inner = self.inner.write().unwrap();
+
+        inner.update(update)
+    }
+}
+
+#[derive(Default)]
+struct Inner {
     previous: Vec<u64>,
     current: Vec<u64>,
 }
 
-impl Diff {
-    pub fn empty() -> Self {
-        Self {
-            previous: vec![],
-            current: vec![],
-        }
-    }
-
-    pub fn difference(&self) -> Vec<u64> {
+impl Inner {
+    fn difference(&self) -> Vec<u64> {
         if self.previous.is_empty() {
             return vec![0; self.current.len()];
         };
@@ -33,8 +47,7 @@ impl Diff {
             .collect()
     }
 
-    /// Updates this [`Diff`] only if the update does not match the current value
-    pub fn update(&mut self, update: Vec<u64>) {
+    fn update(&mut self, update: Vec<u64>) {
         if self.current != update {
             self.previous = self.current.clone();
             self.current = update;

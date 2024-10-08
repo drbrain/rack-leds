@@ -1,5 +1,7 @@
 mod args;
 mod collector;
+mod config;
+mod device;
 mod init;
 mod ui;
 

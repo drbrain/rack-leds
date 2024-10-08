@@ -5,12 +5,14 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, watch};
 use tracing::{debug, info};
 
-use crate::collector::Update;
-use crate::ui::{
-    action::Action,
-    components::{fps::FpsCounter, home::Home, Component},
-    config::Config,
-    tui::{Event, Tui},
+use crate::{
+    collector::Update,
+    ui::{
+        action::Action,
+        components::{fps::FpsCounter, home::Home, Component},
+        config::Config,
+        tui::{Event, Tui},
+    },
 };
 
 pub struct App {
@@ -33,7 +35,11 @@ pub enum Mode {
 }
 
 impl App {
-    pub fn new(tick_rate: f64, frame_rate: f64, updates: watch::Receiver<Update>) -> Result<Self> {
+    pub fn new(
+        tick_rate: f64,
+        frame_rate: f64,
+        updates: watch::Receiver<Vec<Update>>,
+    ) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
             tick_rate,

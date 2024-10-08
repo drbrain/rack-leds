@@ -1,10 +1,17 @@
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use clap::Parser;
+use eyre::Result;
+
+use crate::config::Config;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Args {
+    /// Display config
+    #[arg(short, long, value_name = "DISPLAY_CONFIG")]
+    config: PathBuf,
+
     /// Prometheus source
     #[arg(short, long, value_name = "URL")]
     pub source: String,
@@ -27,6 +34,14 @@ pub struct Args {
 }
 
 impl Args {
+    pub fn config(&self) -> Result<Config> {
+        let config = std::fs::read(self.config.clone())?;
+
+        let config = serde_json::from_slice(&config)?;
+
+        Ok(config)
+    }
+
     pub fn period(&self) -> Duration {
         self.period.unwrap_or_else(|| Duration::from_secs(15))
     }
