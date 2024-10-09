@@ -1,3 +1,9 @@
+use colorgrad::{Gradient, LinearGradient};
+use ratatui::{
+    style::Color,
+    widgets::canvas::{Context, Points},
+};
+
 #[derive(Clone)]
 pub struct Switch {
     receive: Vec<u64>,
@@ -16,11 +22,76 @@ impl Switch {
         Self { receive, transmit }
     }
 
+    pub fn height(&self) -> u16 {
+        if self.receive.len() > 8 {
+            2
+        } else {
+            1
+        }
+    }
+
+    pub fn paint(
+        &self,
+        context: &mut Context,
+        recv_gradient: &LinearGradient,
+        tmit_gradient: &LinearGradient,
+    ) {
+        let ports: Vec<_> = self
+            .receive
+            .iter()
+            .zip(self.transmit.iter())
+            .map(|(recv, tmit)| {
+                let recv = if *recv > 0 {
+                    recv_gradient.at(*recv as f32)
+                } else {
+                    colorgrad::Color::new(0.0, 0.0, 0.0, 0.0)
+                };
+                let recv = palette::Srgb::new(recv.r, recv.g, recv.b);
+
+                let tmit = if *tmit > 0 {
+                    tmit_gradient.at(*tmit as f32)
+                } else {
+                    colorgrad::Color::new(0.0, 0.0, 0.0, 0.0)
+                };
+                let tmit = palette::Srgb::new(tmit.r, tmit.g, tmit.b);
+
+                let mixed: palette::Srgb<u8> = (recv + tmit).into_format();
+
+                Color::Rgb(mixed.red, mixed.blue, mixed.green)
+            })
+            .collect();
+
+        for (port, color) in ports.iter().enumerate() {
+            let col = if port < 16 { port / 2 } else { (port / 2) + 1 };
+            let row = if port % 2 == 0 { 9.0 } else { 10.0 };
+
+            context.draw(&Points {
+                coords: &[(col as f64, row)],
+                color: *color,
+            });
+        }
+    }
+
     pub fn receive(&self) -> &Vec<u64> {
         &self.receive
     }
 
     pub fn transmit(&self) -> &Vec<u64> {
         &self.transmit
+    }
+
+    pub fn width(&self) -> u16 {
+        let width = match self.receive.len() {
+            // 8 ports or less
+            len if len <= 8 => len,
+            // 2^n ports + 2 SFP
+            len if (len - 2).is_power_of_two() => (len / 2) + 2,
+            // even number of ports
+            len if len % 2 == 0 => len / 2,
+            // odd number of ports
+            len => (len / 2) + 1,
+        };
+
+        width.try_into().unwrap_or(u16::MAX)
     }
 }

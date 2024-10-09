@@ -1,4 +1,4 @@
-use colorgrad::{BlendMode, Gradient, GradientBuilder, LinearGradient};
+use colorgrad::{BlendMode, GradientBuilder, LinearGradient};
 use itertools::{
     Itertools,
     MinMaxResult::{MinMax, NoElements, OneElement},
@@ -8,7 +8,7 @@ use ratatui::{
     style::Color,
     symbols::Marker,
     widgets::{
-        canvas::{Canvas, Context, Points},
+        canvas::{Canvas, Context},
         Block, Widget,
     },
 };
@@ -25,7 +25,7 @@ impl<'a> Display<'a> {
     }
 
     fn green(&self, values: &[u64]) -> LinearGradient {
-        let dark = colorgrad::Color::from_hsla(150.0, 1.0, 0.1, 1.0);
+        let dark = colorgrad::Color::from_hsla(150.0, 1.0, 0.12, 1.0);
         let light = colorgrad::Color::from_hsla(150.0, 1.0, 0.5, 1.0);
 
         GradientBuilder::new()
@@ -37,7 +37,7 @@ impl<'a> Display<'a> {
     }
 
     fn blue(&self, values: &[u64]) -> LinearGradient {
-        let dark = colorgrad::Color::from_hsla(210.0, 1.0, 0.1, 1.0);
+        let dark = colorgrad::Color::from_hsla(210.0, 1.0, 0.12, 1.0);
         let light = colorgrad::Color::from_hsla(210.0, 1.0, 0.5, 1.0);
 
         GradientBuilder::new()
@@ -49,43 +49,10 @@ impl<'a> Display<'a> {
     }
 
     fn paint_switch(&self, switch: &Switch, context: &mut Context) {
-        let blue_gradient = self.blue(switch.receive());
-        let green_gradient = self.green(switch.transmit());
+        let recv_gradient = self.blue(switch.receive());
+        let tmit_gradient = self.green(switch.transmit());
 
-        let ports: Vec<_> = switch
-            .receive()
-            .iter()
-            .zip(switch.transmit().iter())
-            .map(|(recv, tmit)| {
-                let blue = if *recv > 0 {
-                    blue_gradient.at(*recv as f32)
-                } else {
-                    colorgrad::Color::new(0.0, 0.0, 0.0, 0.0)
-                };
-                let blue = palette::Srgb::new(blue.r, blue.g, blue.b);
-
-                let green = if *tmit > 0 {
-                    green_gradient.at(*tmit as f32)
-                } else {
-                    colorgrad::Color::new(0.0, 0.0, 0.0, 0.0)
-                };
-                let green = palette::Srgb::new(green.r, green.g, green.b);
-
-                let mixed: palette::Srgb<u8> = (blue + green).into_format();
-
-                Color::Rgb(mixed.red, mixed.blue, mixed.green)
-            })
-            .collect();
-
-        for (port, color) in ports.iter().enumerate() {
-            let col = if port < 16 { port / 2 } else { (port / 2) + 1 };
-            let row = if port % 2 == 0 { 9.0 } else { 10.0 };
-
-            context.draw(&Points {
-                coords: &[(col as f64, row)],
-                color: *color,
-            });
-        }
+        switch.paint(context, &recv_gradient, &tmit_gradient);
     }
 }
 
