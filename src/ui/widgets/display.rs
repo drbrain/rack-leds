@@ -1,8 +1,3 @@
-use colorgrad::{BlendMode, GradientBuilder, LinearGradient};
-use itertools::{
-    Itertools,
-    MinMaxResult::{MinMax, NoElements, OneElement},
-};
 use ratatui::{
     prelude::{Buffer, Rect},
     style::Color,
@@ -13,7 +8,10 @@ use ratatui::{
     },
 };
 
-use crate::collector::{Switch, Update};
+use crate::{
+    collector::{Switch, Update},
+    ui::Gradient,
+};
 
 pub struct Display<'a> {
     updates: &'a Vec<Update>,
@@ -24,33 +22,9 @@ impl<'a> Display<'a> {
         Self { updates }
     }
 
-    fn green(&self, values: &[u64]) -> LinearGradient {
-        let dark = colorgrad::Color::from_hsla(150.0, 1.0, 0.12, 1.0);
-        let light = colorgrad::Color::from_hsla(150.0, 1.0, 0.5, 1.0);
-
-        GradientBuilder::new()
-            .colors(&[dark, light])
-            .domain(&domain(values))
-            .mode(BlendMode::Rgb)
-            .build::<LinearGradient>()
-            .unwrap()
-    }
-
-    fn blue(&self, values: &[u64]) -> LinearGradient {
-        let dark = colorgrad::Color::from_hsla(210.0, 1.0, 0.12, 1.0);
-        let light = colorgrad::Color::from_hsla(210.0, 1.0, 0.5, 1.0);
-
-        GradientBuilder::new()
-            .colors(&[dark, light])
-            .domain(&domain(values))
-            .mode(BlendMode::Rgb)
-            .build::<LinearGradient>()
-            .unwrap()
-    }
-
     fn paint_switch(&self, switch: &Switch, context: &mut Context) {
-        let recv_gradient = self.blue(switch.receive());
-        let tmit_gradient = self.green(switch.transmit());
+        let recv_gradient = Gradient::blue(switch.receive());
+        let tmit_gradient = Gradient::green(switch.transmit());
 
         switch.paint(context, &recv_gradient, &tmit_gradient);
     }
@@ -73,13 +47,5 @@ impl<'a> Widget for Display<'a> {
             });
 
         canvas.render(area, buf);
-    }
-}
-
-fn domain(values: &[u64]) -> Vec<f32> {
-    match values.iter().filter(|v| **v != 0).minmax() {
-        NoElements => vec![0.0, 1.0],
-        OneElement(one) => vec![0.0, *one as f32],
-        MinMax(min, max) => vec![*min as f32, *max as f32],
     }
 }

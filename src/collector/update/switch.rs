@@ -1,8 +1,9 @@
-use colorgrad::{Gradient, LinearGradient};
 use ratatui::{
     style::Color,
     widgets::canvas::{Context, Points},
 };
+
+use crate::ui::Gradient;
 
 #[derive(Clone)]
 pub struct Switch {
@@ -30,32 +31,13 @@ impl Switch {
         }
     }
 
-    pub fn paint(
-        &self,
-        context: &mut Context,
-        recv_gradient: &LinearGradient,
-        tmit_gradient: &LinearGradient,
-    ) {
+    pub fn paint(&self, context: &mut Context, recv_gradient: &Gradient, tmit_gradient: &Gradient) {
         let ports: Vec<_> = self
             .receive
             .iter()
             .zip(self.transmit.iter())
             .map(|(recv, tmit)| {
-                let recv = if *recv > 0 {
-                    recv_gradient.at(*recv as f32)
-                } else {
-                    colorgrad::Color::new(0.0, 0.0, 0.0, 0.0)
-                };
-                let recv = palette::Srgb::new(recv.r, recv.g, recv.b);
-
-                let tmit = if *tmit > 0 {
-                    tmit_gradient.at(*tmit as f32)
-                } else {
-                    colorgrad::Color::new(0.0, 0.0, 0.0, 0.0)
-                };
-                let tmit = palette::Srgb::new(tmit.r, tmit.g, tmit.b);
-
-                let mixed: palette::Srgb<u8> = (recv + tmit).into_format();
+                let mixed = recv_gradient.at(*recv as f32) + tmit_gradient.at(*tmit as f32);
 
                 Color::Rgb(mixed.red, mixed.blue, mixed.green)
             })
