@@ -37,7 +37,8 @@ impl Switch {
             .iter()
             .zip(self.transmit.iter())
             .map(|(recv, tmit)| {
-                let mixed = recv_gradient.at(*recv as f32) + tmit_gradient.at(*tmit as f32);
+                let mixed: palette::Srgb<u8> =
+                    (recv_gradient.at(*recv) + tmit_gradient.at(*tmit)).into_format();
 
                 Color::Rgb(mixed.red, mixed.blue, mixed.green)
             })

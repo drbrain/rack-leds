@@ -35,14 +35,15 @@ impl Gradient {
         Self { inner }
     }
 
-    pub fn at(&self, value: f32) -> Srgb<u8> {
-        let color = if value > 0.0 {
-            self.inner.at(value)
+    /// Look up a color in the gradient domain, use the background color if the value is 0.
+    pub fn at(&self, value: u64) -> Srgb {
+        let color = if value > 0 {
+            self.inner.at(value as f32)
         } else {
             Color::new(0.0, 0.0, 0.0, 0.0)
         };
 
-        Srgb::new(color.r, color.g, color.b).into_format()
+        Srgb::new(color.r, color.g, color.b)
     }
 }
 
