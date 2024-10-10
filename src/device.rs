@@ -3,7 +3,7 @@ mod switch;
 use eyre::Result;
 pub use switch::Switch;
 
-use crate::collector::{Prometheus, Update};
+use crate::{collector::Prometheus, Update};
 
 pub enum Device {
     Switch(Switch),

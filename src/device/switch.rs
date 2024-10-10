@@ -1,7 +1,10 @@
 use eyre::Result;
 use tracing::{instrument, trace};
 
-use crate::collector::{Diff, Prometheus};
+use crate::{
+    collector::{Diff, Prometheus},
+    update,
+};
 
 pub struct Switch {
     labels: String,
@@ -19,7 +22,7 @@ impl Switch {
     }
 
     #[instrument(skip_all, fields(labels = ?self.labels))]
-    pub async fn update(&self, client: &Prometheus) -> Result<crate::collector::Switch> {
+    pub async fn update(&self, client: &Prometheus) -> Result<update::Switch> {
         let receive_query = format!(
             "sum(rate(ifHCInOctets{{{}}}[1m])) by (ifIndex)",
             self.labels
@@ -40,9 +43,6 @@ impl Switch {
             "updated"
         );
 
-        Ok(crate::collector::Switch::new(
-            receive_difference,
-            transmit_difference,
-        ))
+        Ok(update::Switch::new(receive_difference, transmit_difference))
     }
 }

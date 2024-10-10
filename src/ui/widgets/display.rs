@@ -8,10 +8,7 @@ use ratatui::{
     },
 };
 
-use crate::{
-    collector::{Switch, Update},
-    ui::Gradient,
-};
+use crate::{ui::Gradient, update::Switch, Update};
 
 pub struct Display<'a> {
     update: &'a Update,

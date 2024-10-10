@@ -6,13 +6,13 @@ use tokio::sync::{mpsc, watch};
 use tracing::{debug, info};
 
 use crate::{
-    collector::Update,
     ui::{
         action::Action,
         components::{fps::FpsCounter, home::Home, Component},
         config::Config,
         tui::{Event, Tui},
     },
+    Update,
 };
 
 pub struct App {

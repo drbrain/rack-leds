@@ -3,8 +3,8 @@ use ratatui::{prelude::*, widgets::*};
 use tokio::sync::{mpsc::UnboundedSender, watch};
 
 use crate::{
-    collector::Update,
     ui::{widgets::Display, Action, Component, Config},
+    Update,
 };
 
 pub struct Home {

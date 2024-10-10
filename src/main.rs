@@ -4,8 +4,10 @@ mod config;
 mod device;
 mod init;
 mod ui;
+mod update;
 
 pub use crate::args::Args;
+pub use crate::update::Update;
 use collector::Collector;
 use eyre::Result;
 use tokio::signal::{

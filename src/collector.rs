@@ -1,14 +1,12 @@
 mod diff;
 mod prometheus;
-mod update;
 
 pub use diff::Diff;
 use eyre::{Context, Result};
 pub use prometheus::Prometheus;
 use tokio::{sync::watch, task::JoinHandle};
-pub use update::{Switch, Update};
 
-use crate::Args;
+use crate::{Args, Update};
 
 pub struct Collector {
     collector: JoinHandle<Result<()>>,
