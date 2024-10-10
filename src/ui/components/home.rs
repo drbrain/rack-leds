@@ -48,15 +48,30 @@ impl Component for Home {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        let update = self.updates.borrow().clone();
+        let updates = self.updates.borrow().clone();
 
         let [status, display_body] =
             Layout::vertical([Constraint::Length(1), Constraint::Length(13)]).areas(area);
 
-        let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display_body);
-
         frame.render_widget(Paragraph::new("rack-leds"), status);
-        frame.render_widget(Display::new(&update), display);
+
+        let [display_outer] = Layout::horizontal([Constraint::Length(55)]).areas(display_body);
+
+        let display = Block::new().title("Display").borders(Borders::ALL);
+        let display_inner = display.inner(display_outer);
+        frame.render_widget(display, display_outer);
+
+        let heights: Vec<_> = updates.iter().map(|update| update.height()).collect();
+
+        let layout = Layout::vertical(heights).split(display_inner);
+
+        layout
+            .iter()
+            .zip(updates.iter())
+            .for_each(|(area, update)| {
+                let layout = Layout::horizontal([update.width()]).split(*area);
+                frame.render_widget(Display::new(update), *layout.as_ref().first().unwrap())
+            });
 
         Ok(())
     }

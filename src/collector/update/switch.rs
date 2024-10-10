@@ -46,7 +46,7 @@ impl Switch {
 
         for (port, color) in ports.iter().enumerate() {
             let col = if port < 16 { port / 2 } else { (port / 2) + 1 };
-            let row = if port % 2 == 0 { 9.0 } else { 10.0 };
+            let row = if port % 2 == 0 { 0.0 } else { 1.0 };
 
             context.draw(&Points {
                 coords: &[(col as f64, row)],
@@ -68,7 +68,7 @@ impl Switch {
             // 8 ports or less
             len if len <= 8 => len,
             // 2^n ports + 2 SFP
-            len if (len - 2).is_power_of_two() => (len / 2) + 2,
+            len if (len - 2).is_power_of_two() => (len / 2) + 1,
             // even number of ports
             len if len % 2 == 0 => len / 2,
             // odd number of ports
@@ -76,5 +76,37 @@ impl Switch {
         };
 
         width.try_into().unwrap_or(u16::MAX)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn width() {
+        {
+            let switch = Switch::new(Vec::from([0; 5]), Vec::from([0; 5]));
+
+            assert_eq!(5, switch.width());
+        }
+
+        {
+            let switch = Switch::new(Vec::from([0; 8]), Vec::from([0; 8]));
+
+            assert_eq!(8, switch.width());
+        }
+
+        {
+            let switch = Switch::new(Vec::from([0; 16]), Vec::from([0; 16]));
+
+            assert_eq!(8, switch.width());
+        }
+
+        {
+            let switch = Switch::new(Vec::from([0; 18]), Vec::from([0; 18]));
+
+            assert_eq!(10, switch.width());
+        }
     }
 }
