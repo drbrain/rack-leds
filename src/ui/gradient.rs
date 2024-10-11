@@ -1,4 +1,5 @@
 use colorgrad::{BlendMode, Color, Gradient as _, GradientBuilder, LinearGradient};
+use eyre::{Context, Result};
 use itertools::{
     Itertools,
     MinMaxResult::{MinMax, NoElements, OneElement},
@@ -10,29 +11,31 @@ pub struct Gradient {
 }
 
 impl Gradient {
-    pub fn blue(values: &[u64]) -> Self {
+    pub fn blue(values: &[u64]) -> Result<Self> {
         let dark = Color::from_hsla(210.0, 1.0, 0.12, 1.0);
         let light = Color::from_hsla(210.0, 1.0, 0.5, 1.0);
 
         Self::new(dark, light, values)
     }
 
-    pub fn green(values: &[u64]) -> Self {
+    pub fn green(values: &[u64]) -> Result<Self> {
         let dark = Color::from_hsla(150.0, 1.0, 0.12, 1.0);
         let light = Color::from_hsla(150.0, 1.0, 0.5, 1.0);
 
         Self::new(dark, light, values)
     }
 
-    fn new(dark: Color, light: Color, values: &[u64]) -> Self {
+    fn new(dark: Color, light: Color, values: &[u64]) -> Result<Self> {
         let inner = GradientBuilder::new()
-            .colors(&[dark, light])
+            .colors(&[dark.clone(), light.clone()])
             .domain(&domain(values))
             .mode(BlendMode::Rgb)
             .build::<LinearGradient>()
-            .unwrap();
+            .wrap_err(format!(
+                "Unable to create gradient for {dark:?} {light:?} {values:?}"
+            ))?;
 
-        Self { inner }
+        Ok(Self { inner })
     }
 
     /// Look up a color in the gradient domain, use the background color if the value is 0.

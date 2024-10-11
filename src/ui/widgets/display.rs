@@ -1,3 +1,4 @@
+use eyre::Result;
 use ratatui::{
     prelude::{Buffer, Rect},
     style::Color,
@@ -19,11 +20,13 @@ impl<'a> Display<'a> {
         Self { update }
     }
 
-    fn paint_switch(&self, switch: &Switch, layout: Layout, context: &mut Context) {
-        let recv_gradient = Gradient::blue(switch.receive());
-        let tmit_gradient = Gradient::green(switch.transmit());
+    fn paint_switch(&self, switch: &Switch, layout: Layout, context: &mut Context) -> Result<()> {
+        let recv_gradient = Gradient::blue(switch.receive())?;
+        let tmit_gradient = Gradient::green(switch.transmit())?;
 
         switch.paint(context, layout, &recv_gradient, &tmit_gradient);
+
+        Ok(())
     }
 }
 
@@ -38,7 +41,7 @@ impl<'a> Widget for Display<'a> {
                 Update::Switch {
                     device: switch,
                     layout,
-                } => self.paint_switch(switch, *layout, context),
+                } => self.paint_switch(switch, *layout, context).unwrap(),
             });
 
         canvas.render(area, buf);
