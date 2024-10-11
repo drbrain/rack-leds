@@ -89,26 +89,17 @@ fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) 
 
     let layout = Layout::vertical(heights).split(display_inner);
 
-    let mut lines = vec![];
-
-    //updates.iter().map(|u| format!("{u:?}").into()).collect();
+    let lines = vec![];
 
     layout
         .iter()
         .zip(updates.iter())
         .for_each(|(area, update)| {
-            let [layout] = Layout::horizontal([update.width()]).split(*area)[..] else {
+            let [area] = Layout::horizontal([update.width()]).split(*area)[..] else {
                 unreachable!("Constraints removed from layout");
             };
 
-            lines.push(format!(
-                "layout: {:?}, x: {} y: {}",
-                layout,
-                update.x_bound(),
-                update.y_bound(),
-            ));
-
-            frame.render_widget(Display::new(update), layout);
+            frame.render_widget(Display::new(update), area);
         });
 
     lines

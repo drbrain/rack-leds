@@ -78,7 +78,11 @@ impl Layout {
     }
 
     pub fn y_bound(&self) -> f64 {
-        self.height().saturating_sub(1).into()
+        if self.height() == 1 {
+            1.0
+        } else {
+            self.height().saturating_sub(1).into()
+        }
     }
 }
 
