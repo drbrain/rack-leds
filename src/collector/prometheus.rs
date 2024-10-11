@@ -71,8 +71,28 @@ impl Prometheus {
         }
     }
 
+    #[instrument(skip_all, fields(%query, %label))]
+    pub async fn get_label(&self, query: impl Display, label: impl Display) -> Result<String> {
+        let result = self.client.query(query).timeout(self.timeout).get().await?;
+
+        let value = result
+            .data()
+            .as_vector()
+            .ok_or_eyre("Non-vector query result")?
+            .iter()
+            .next()
+            .ok_or_eyre("Nothing matched")?
+            .metric()
+            .get(&label.to_string())
+            .ok_or_eyre(format!("Could not find label {label}"))?;
+
+        trace!(?value);
+
+        Ok(value.to_string())
+    }
+
     #[instrument(skip_all, fields(%query))]
-    pub async fn query(&self, query: impl Display) -> Result<Vec<u64>> {
+    pub async fn get_values(&self, query: impl Display) -> Result<Vec<u64>> {
         let values: Vec<_> = self
             .client
             .query(query)

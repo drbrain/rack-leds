@@ -12,7 +12,11 @@ pub enum Device {
 impl Device {
     pub async fn update(&self, prometheus: &Prometheus) -> Result<Update> {
         let update = match self {
-            Device::Switch(switch) => Update::Switch(switch.update(prometheus).await?),
+            Device::Switch(switch) => {
+                let device = switch.update(prometheus).await?;
+                let layout = switch.layout(prometheus).await?;
+                Update::Switch { layout, device }
+            }
         };
 
         Ok(update)

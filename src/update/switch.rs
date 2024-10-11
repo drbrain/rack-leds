@@ -3,9 +3,9 @@ use ratatui::{
     widgets::canvas::{Context, Points},
 };
 
-use crate::ui::Gradient;
+use crate::{ui::Gradient, Layout};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Switch {
     receive: Vec<u64>,
     transmit: Vec<u64>,
@@ -31,28 +31,27 @@ impl Switch {
         }
     }
 
-    pub fn paint(&self, context: &mut Context, recv_gradient: &Gradient, tmit_gradient: &Gradient) {
-        let ports: Vec<_> = self
-            .receive
+    pub fn paint(
+        &self,
+        context: &mut Context,
+        layout: Layout,
+        recv_gradient: &Gradient,
+        tmit_gradient: &Gradient,
+    ) {
+        self.receive
             .iter()
             .zip(self.transmit.iter())
-            .map(|(recv, tmit)| {
+            .enumerate()
+            .for_each(|(port, (recv, tmit))| {
+                let coords = &[layout.coordinate(port)];
+
                 let mixed: palette::Srgb<u8> =
                     (recv_gradient.at(*recv) + tmit_gradient.at(*tmit)).into_format();
 
-                Color::Rgb(mixed.red, mixed.blue, mixed.green)
-            })
-            .collect();
+                let color = Color::Rgb(mixed.red, mixed.blue, mixed.green);
 
-        for (port, color) in ports.iter().enumerate() {
-            let col = if port < 16 { port / 2 } else { (port / 2) + 1 };
-            let row = if port % 2 == 0 { 0.0 } else { 1.0 };
-
-            context.draw(&Points {
-                coords: &[(col as f64, row)],
-                color: *color,
+                context.draw(&Points { coords, color });
             });
-        }
     }
 
     pub fn receive(&self) -> &Vec<u64> {

@@ -3,7 +3,7 @@ use tracing::{instrument, trace};
 
 use crate::{
     collector::{Diff, Prometheus},
-    update,
+    update, Layout,
 };
 
 pub struct Switch {
@@ -22,19 +22,25 @@ impl Switch {
     }
 
     #[instrument(skip_all, fields(labels = ?self.labels))]
+    pub async fn layout(&self, client: &Prometheus) -> Result<Layout> {
+        Layout::new(client, &self.labels).await
+    }
+
+    #[instrument(skip_all, fields(labels = ?self.labels))]
     pub async fn update(&self, client: &Prometheus) -> Result<update::Switch> {
         let receive_query = format!(
-            "sum(rate(ifHCInOctets{{{}}}[1m])) by (ifIndex)",
+            "sum(rate(ifHCInOctets{{{}, ifAlias=~\"(Port|SFP) .*\"}}[1m])) by (ifIndex)",
             self.labels
         );
-        self.receive.update(client.query(receive_query).await?);
+        self.receive.update(client.get_values(receive_query).await?);
         let receive_difference = self.receive.difference();
 
         let transmit_query = format!(
-            "sum(rate(ifHCOutOctets{{{}}}[1m])) by (ifIndex)",
+            "sum(rate(ifHCOutOctets{{{}, ifAlias=~\"(Port|SFP) .*\"}}[1m])) by (ifIndex)",
             self.labels
         );
-        self.transmit.update(client.query(transmit_query).await?);
+        self.transmit
+            .update(client.get_values(transmit_query).await?);
         let transmit_difference = self.transmit.difference();
 
         trace!(
