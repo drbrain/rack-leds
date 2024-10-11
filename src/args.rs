@@ -12,6 +12,10 @@ pub struct Args {
     #[arg(short, long, value_name = "DISPLAY_CONFIG")]
     config: PathBuf,
 
+    /// Don't show a UI
+    #[arg(long, default_value_t = false)]
+    pub headless: bool,
+
     /// Prometheus source
     #[arg(short, long, value_name = "URL")]
     pub source: String,

@@ -16,6 +16,7 @@ use tokio::signal::{
     ctrl_c,
     unix::{signal, SignalKind},
 };
+use tokio::task::JoinSet;
 use tracing::info;
 use ui::App;
 
@@ -29,23 +30,38 @@ fn main() -> Result<()> {
 
 #[tokio::main]
 async fn tokio_main(args: Args) -> Result<()> {
+    let mut tasks = JoinSet::new();
+
     let collector = Collector::new(&args)?;
+    let updates = collector.subscribe();
+    tasks.spawn(async move { collector.wait().await });
 
-    let mut app = App::new(args.tick_rate, args.frame_rate, collector.subscribe())?;
+    tasks.spawn(async {
+        ctrl_c().await?;
 
-    let ctrl_c = ctrl_c();
-    let mut term = signal(SignalKind::terminate())?;
+        info!("shutdown requested");
 
-    tokio::select! {
-        result = collector.wait() => { result?; },
-        result = app.run() => { result? },
-        _ = ctrl_c => {
-            info!("shutdown requested")
-        },
-        _ = term.recv() => {
-            info!("shutdown requested")
+        Ok(())
+    });
+
+    tasks.spawn(async {
+        signal(SignalKind::terminate())?.recv().await;
+
+        info!("shutdown requested");
+
+        Ok(())
+    });
+
+    if args.headless {
+        if let Some(result) = tasks.join_next().await {
+            result??;
         }
+    } else {
+        let mut app = App::new(args.tick_rate, args.frame_rate, updates)?;
+        app.run().await?;
     }
+
+    tasks.abort_all();
 
     Ok(())
 }
