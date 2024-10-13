@@ -119,17 +119,6 @@ impl Component for Home {
     }
 }
 
-fn draw_tracing(debug_outer: Rect, frame: &mut Frame<'_>, log: &VecDeque<LogLine>) {
-    let debug = Block::new().title("Log").borders(Borders::ALL);
-    let debug_inner = debug.inner(debug_outer);
-    frame.render_widget(debug, debug_outer);
-
-    let text: Vec<Line> = log.iter().map(|line| line.to_line()).collect();
-    let text = Text::from(text);
-
-    frame.render_widget(text, debug_inner);
-}
-
 fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) {
     let display = Block::new().title("Display").borders(Borders::ALL);
     let display_inner = display.inner(display_outer);
@@ -149,4 +138,25 @@ fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) 
 
             frame.render_widget(Display::new(update), area);
         });
+}
+
+fn draw_tracing(debug_outer: Rect, frame: &mut Frame<'_>, log: &VecDeque<LogLine>) {
+    let block = Block::new().title("Log").borders(Borders::ALL);
+    let debug_inner = block.inner(debug_outer);
+
+    let text: Vec<Line> = log.iter().map(|line| line.to_line()).collect();
+    let text = Text::from(text);
+
+    let text = Paragraph::new(text).block(block).wrap(Wrap { trim: false });
+
+    // NOTE: Scrolling is hard https://github.com/ratatui/ratatui/issues/174
+    let line_offset = text
+        .line_count(debug_inner.width)
+        .saturating_sub(debug_inner.height.into())
+        .try_into()
+        .unwrap_or(0);
+
+    let text = text.scroll((line_offset, 0));
+
+    frame.render_widget(text, debug_inner);
 }

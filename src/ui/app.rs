@@ -2,7 +2,7 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
-use ratatui::{prelude::Rect, text::Line};
+use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, mpsc, watch};
 use tracing::{debug, info};
