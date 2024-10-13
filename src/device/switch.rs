@@ -9,15 +9,23 @@ use crate::{
 pub struct Switch {
     labels: String,
     receive: Diff,
+    receive_query: String,
     transmit: Diff,
+    transmit_query: String,
+    poe: Diff,
+    poe_query: String,
 }
 
 impl Switch {
-    pub fn new(labels: &str) -> Self {
+    pub fn new(labels: &str, receive_query: &str, transmit_query: &str, poe_query: &str) -> Self {
         Self {
             labels: labels.to_string(),
             receive: Default::default(),
+            receive_query: receive_query.into(),
             transmit: Default::default(),
+            transmit_query: transmit_query.into(),
+            poe: Default::default(),
+            poe_query: poe_query.into(),
         }
     }
 
@@ -28,27 +36,48 @@ impl Switch {
 
     #[instrument(skip_all, fields(labels = ?self.labels))]
     pub async fn update(&self, client: &Prometheus) -> Result<update::Switch> {
-        let receive_query = format!(
-            "sum(rate(ifHCInOctets{{{}, ifAlias=~\"(Port|SFP) .*\"}}[1m])) by (ifIndex)",
-            self.labels
-        );
-        self.receive.update(client.get_values(receive_query).await?);
+        self.receive
+            .update(client.get_values(&self.receive_query).await?);
         let receive_difference = self.receive.difference();
 
-        let transmit_query = format!(
-            "sum(rate(ifHCOutOctets{{{}, ifAlias=~\"(Port|SFP) .*\"}}[1m])) by (ifIndex)",
-            self.labels
-        );
         self.transmit
-            .update(client.get_values(transmit_query).await?);
+            .update(client.get_values(&self.transmit_query).await?);
         let transmit_difference = self.transmit.difference();
+
+        self.update_poe(client).await?;
+        let poe_difference = self.poe.difference();
 
         trace!(
             receive = ?receive_difference,
             transmit = ?transmit_difference,
+            poe = ?poe_difference,
             "updated"
         );
 
-        Ok(update::Switch::new(receive_difference, transmit_difference))
+        Ok(update::Switch::new(
+            receive_difference,
+            transmit_difference,
+            poe_difference,
+        ))
+    }
+
+    async fn update_poe(&self, client: &Prometheus) -> Result<()> {
+        let mut poe = vec![0; self.receive.len()];
+
+        client
+            .get_values_with_label(&self.poe_query, "port_num")
+            .await?
+            .iter()
+            .map(|(v, l)| {
+                (
+                    v,
+                    l.clone().and_then(|l| l.parse::<usize>().ok()).unwrap_or(0),
+                )
+            })
+            .for_each(|(v, p)| poe[p] = *v);
+
+        self.poe.update(poe);
+
+        Ok(())
     }
 }

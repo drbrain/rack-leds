@@ -12,6 +12,12 @@ impl Diff {
         inner.difference()
     }
 
+    pub fn len(&self) -> usize {
+        let inner = self.inner.read().unwrap();
+
+        inner.len()
+    }
+
     /// Updates this [`Diff`] only if the update does not match the current value
     pub fn update(&self, update: Vec<u64>) {
         let mut inner = self.inner.write().unwrap();
@@ -45,6 +51,10 @@ impl Inner {
             .zip(self.current.iter())
             .map(|(p, c)| c.saturating_sub(*p))
             .collect()
+    }
+
+    fn len(&self) -> usize {
+        self.current.len()
     }
 
     fn update(&mut self, update: Vec<u64>) {

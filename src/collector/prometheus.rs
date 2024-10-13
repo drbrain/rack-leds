@@ -1,6 +1,6 @@
 use eyre::{Context, OptionExt, Result};
 use itertools::Itertools;
-use prometheus_http_query::Client;
+use prometheus_http_query::{response::PromqlResult, Client};
 use std::{fmt::Display, time::Duration};
 use tokio::{sync::watch, task::JoinHandle, time};
 use tracing::{debug, instrument, trace};
@@ -73,7 +73,7 @@ impl Prometheus {
 
     #[instrument(skip_all, fields(%query, %label))]
     pub async fn get_label(&self, query: impl Display, label: impl Display) -> Result<String> {
-        let result = self.client.query(query).timeout(self.timeout).get().await?;
+        let result = self.query(query).await?;
 
         let value = result
             .data()
@@ -94,10 +94,7 @@ impl Prometheus {
     #[instrument(skip_all, fields(%query))]
     pub async fn get_values(&self, query: impl Display) -> Result<Vec<u64>> {
         let values: Vec<_> = self
-            .client
             .query(query)
-            .timeout(self.timeout)
-            .get()
             .await?
             .data()
             .as_vector()
@@ -116,5 +113,32 @@ impl Prometheus {
         trace!(?values);
 
         Ok(values)
+    }
+
+    #[instrument(skip_all, fields(%query, %label))]
+    pub async fn get_values_with_label(
+        &self,
+        query: impl Display,
+        label: impl Display,
+    ) -> Result<Vec<(u64, Option<String>)>> {
+        let label = label.to_string();
+
+        let values: Vec<_> = self
+            .query(query)
+            .await?
+            .data()
+            .as_vector()
+            .ok_or_eyre("Non-vector query result")?
+            .iter()
+            .map(|v| (v.sample().value() as u64, v.metric().get(&label).cloned()))
+            .collect();
+
+        trace!(?values);
+
+        Ok(values)
+    }
+
+    async fn query(&self, query: impl Display) -> Result<PromqlResult> {
+        Ok(self.client.query(query).timeout(self.timeout).get().await?)
     }
 }

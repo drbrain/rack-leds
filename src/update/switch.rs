@@ -1,3 +1,5 @@
+use color_art::BlendMode;
+use itertools::multizip;
 use ratatui::{
     style::Color,
     widgets::canvas::{Context, Points},
@@ -9,6 +11,7 @@ use crate::{ui::Gradient, Layout};
 pub struct Switch {
     receive: Vec<u64>,
     transmit: Vec<u64>,
+    poe: Vec<u64>,
 }
 
 impl Switch {
@@ -16,11 +19,16 @@ impl Switch {
         Self {
             receive: vec![],
             transmit: vec![],
+            poe: vec![],
         }
     }
 
-    pub fn new(receive: Vec<u64>, transmit: Vec<u64>) -> Self {
-        Self { receive, transmit }
+    pub fn new(receive: Vec<u64>, transmit: Vec<u64>, poe: Vec<u64>) -> Self {
+        Self {
+            receive,
+            transmit,
+            poe,
+        }
     }
 
     pub fn height(&self) -> u16 {
@@ -37,21 +45,28 @@ impl Switch {
         layout: Layout,
         recv_gradient: &Gradient,
         tmit_gradient: &Gradient,
+        poe_gradient: &Gradient,
     ) {
-        self.receive
-            .iter()
-            .zip(self.transmit.iter())
+        multizip((self.receive.iter(), self.transmit.iter(), self.poe.iter()))
             .enumerate()
-            .for_each(|(port, (recv, tmit))| {
+            .for_each(|(port, (recv, tmit, poe))| {
                 let coords = &[layout.coordinate(port)];
 
-                let mixed: palette::Srgb<u8> =
-                    (recv_gradient.at(*recv) + tmit_gradient.at(*tmit)).into_format();
+                let mixed = color_art::blend(
+                    &recv_gradient.at(*recv),
+                    &tmit_gradient.at(*tmit),
+                    BlendMode::Screen,
+                );
+                let mixed = color_art::blend(&mixed, &poe_gradient.at(*poe), BlendMode::Screen);
 
-                let color = Color::Rgb(mixed.red, mixed.blue, mixed.green);
+                let color = Color::Rgb(mixed.red(), mixed.blue(), mixed.green());
 
                 context.draw(&Points { coords, color });
             });
+    }
+
+    pub fn poe(&self) -> &Vec<u64> {
+        &self.poe
     }
 
     pub fn receive(&self) -> &Vec<u64> {
@@ -85,25 +100,25 @@ mod test {
     #[test]
     fn width() {
         {
-            let switch = Switch::new(Vec::from([0; 5]), Vec::from([0; 5]));
+            let switch = Switch::new(Vec::from([0; 5]), Vec::from([0; 5]), Vec::from([0; 5]));
 
             assert_eq!(5, switch.width());
         }
 
         {
-            let switch = Switch::new(Vec::from([0; 8]), Vec::from([0; 8]));
+            let switch = Switch::new(Vec::from([0; 8]), Vec::from([0; 8]), Vec::from([0; 8]));
 
             assert_eq!(8, switch.width());
         }
 
         {
-            let switch = Switch::new(Vec::from([0; 16]), Vec::from([0; 16]));
+            let switch = Switch::new(Vec::from([0; 16]), Vec::from([0; 16]), Vec::from([0; 16]));
 
             assert_eq!(8, switch.width());
         }
 
         {
-            let switch = Switch::new(Vec::from([0; 18]), Vec::from([0; 18]));
+            let switch = Switch::new(Vec::from([0; 18]), Vec::from([0; 18]), Vec::from([0; 18]));
 
             assert_eq!(10, switch.width());
         }

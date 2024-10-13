@@ -23,8 +23,15 @@ impl<'a> Display<'a> {
     fn paint_switch(&self, switch: &Switch, layout: Layout, context: &mut Context) -> Result<()> {
         let recv_gradient = Gradient::blue(switch.receive())?;
         let tmit_gradient = Gradient::green(switch.transmit())?;
+        let poe_gradient = Gradient::red(switch.poe())?;
 
-        switch.paint(context, layout, &recv_gradient, &tmit_gradient);
+        switch.paint(
+            context,
+            layout,
+            &recv_gradient,
+            &tmit_gradient,
+            &poe_gradient,
+        );
 
         Ok(())
     }
