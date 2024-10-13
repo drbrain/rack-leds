@@ -1,11 +1,14 @@
+use std::sync::{atomic::AtomicBool, Arc};
+
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
-use ratatui::prelude::Rect;
+use ratatui::{prelude::Rect, text::Line};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{broadcast, mpsc, watch};
 use tracing::{debug, info};
 
 use crate::{
+    tui_tracing::LogLine,
     ui::{
         action::Action,
         components::{fps::FpsCounter, home::Home, Component},
@@ -16,6 +19,7 @@ use crate::{
 };
 
 pub struct App {
+    gui_active: Arc<AtomicBool>,
     config: Config,
     tick_rate: f64,
     frame_rate: f64,
@@ -36,16 +40,19 @@ pub enum Mode {
 
 impl App {
     pub fn new(
+        gui_active: Arc<AtomicBool>,
+        tracing_receiver: broadcast::Receiver<LogLine>,
         tick_rate: f64,
         frame_rate: f64,
         updates: watch::Receiver<Vec<Update>>,
     ) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
+            gui_active,
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Home::new(updates)),
+                Box::new(Home::new(updates, tracing_receiver)),
                 Box::new(FpsCounter::default()),
             ],
             should_quit: false,
@@ -59,7 +66,7 @@ impl App {
     }
 
     pub async fn run(&mut self) -> Result<()> {
-        let mut tui = Tui::new()?
+        let mut tui = Tui::new(self.gui_active.clone())?
             // .mouse(true) // uncomment this line to enable mouse support
             .tick_rate(self.tick_rate)
             .frame_rate(self.frame_rate);

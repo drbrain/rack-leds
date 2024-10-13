@@ -3,6 +3,10 @@
 use std::{
     io::{stdout, Stdout},
     ops::{Deref, DerefMut},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::Duration,
 };
 
@@ -43,6 +47,7 @@ pub enum Event {
 }
 
 pub struct Tui {
+    gui_active: Arc<AtomicBool>,
     pub terminal: ratatui::Terminal<Backend<Stdout>>,
     pub task: JoinHandle<()>,
     pub cancellation_token: CancellationToken,
@@ -55,9 +60,10 @@ pub struct Tui {
 }
 
 impl Tui {
-    pub fn new() -> Result<Self> {
+    pub fn new(gui_active: Arc<AtomicBool>) -> Result<Self> {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
         Ok(Self {
+            gui_active,
             terminal: ratatui::Terminal::new(Backend::new(stdout()))?,
             task: tokio::spawn(async {}),
             cancellation_token: CancellationToken::new(),
@@ -173,6 +179,7 @@ impl Tui {
         if self.paste {
             crossterm::execute!(stdout(), EnableBracketedPaste)?;
         }
+        self.gui_active.store(true, Ordering::Relaxed);
         self.start();
         Ok(())
     }
@@ -190,6 +197,7 @@ impl Tui {
             crossterm::execute!(stdout(), LeaveAlternateScreen, cursor::Show)?;
             crossterm::terminal::disable_raw_mode()?;
         }
+        self.gui_active.store(false, Ordering::Relaxed);
         Ok(())
     }
 

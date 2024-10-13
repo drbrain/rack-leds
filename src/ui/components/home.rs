@@ -1,8 +1,16 @@
+use std::collections::VecDeque;
+
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
-use tokio::sync::{mpsc::UnboundedSender, watch};
+use text::ToLine;
+use tokio::sync::{
+    broadcast::{self, error::TryRecvError},
+    mpsc::UnboundedSender,
+    watch,
+};
 
 use crate::{
+    tui_tracing::LogLine,
     ui::{widgets::Display, Action, Component, Config},
     Update,
 };
@@ -11,19 +19,58 @@ pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     updates: watch::Receiver<Vec<Update>>,
+    tracing_receiver: broadcast::Receiver<LogLine>,
+    log: VecDeque<LogLine>,
+    log_max_lines: usize,
 }
 
 impl Home {
-    pub fn new(updates: watch::Receiver<Vec<Update>>) -> Self {
+    pub fn new(
+        updates: watch::Receiver<Vec<Update>>,
+        tracing_receiver: broadcast::Receiver<LogLine>,
+    ) -> Self {
         Self {
             command_tx: Default::default(),
             config: Default::default(),
             updates,
+            tracing_receiver,
+            log: Default::default(),
+            log_max_lines: 50,
         }
+    }
+
+    fn trim_log(&mut self) {
+        while self.log.len() > self.log_max_lines {
+            self.log.pop_front();
+        }
+    }
+
+    fn update_log(&mut self) {
+        loop {
+            match self.tracing_receiver.try_recv() {
+                Ok(log_line) => self.log.push_back(log_line),
+                Err(TryRecvError::Lagged(count)) => {
+                    self.log.push_back(LogLine::missed(count));
+                }
+                Err(TryRecvError::Closed) | Err(TryRecvError::Empty) => break,
+            }
+            self.trim_log();
+        }
+    }
+
+    fn update_log_max_lines(&mut self, height: usize) {
+        self.log_max_lines = height.saturating_add(10);
+        self.trim_log();
     }
 }
 
 impl Component for Home {
+    fn init(&mut self, area: Size) -> Result<()> {
+        self.update_log_max_lines(area.height.into());
+
+        Ok(())
+    }
+
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
         Ok(())
@@ -37,10 +84,13 @@ impl Component for Home {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::Tick => {
-                // add any logic here that should run on every tick
+                self.update_log();
             }
             Action::Render => {
                 // add any logic here that should run on every render
+            }
+            Action::Resize(_, height) => {
+                self.update_log_max_lines(height.into());
             }
             _ => {}
         }
@@ -61,26 +111,26 @@ impl Component for Home {
 
         let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display);
 
-        let text = draw_display(display, frame, &updates);
+        draw_display(display, frame, &updates);
 
-        draw_debug(debug, frame, text);
+        draw_tracing(debug, frame, &self.log);
 
         Ok(())
     }
 }
 
-fn draw_debug(debug_outer: Rect, frame: &mut Frame<'_>, text: Vec<String>) {
-    let debug = Block::new().title("Debug").borders(Borders::ALL);
+fn draw_tracing(debug_outer: Rect, frame: &mut Frame<'_>, log: &VecDeque<LogLine>) {
+    let debug = Block::new().title("Log").borders(Borders::ALL);
     let debug_inner = debug.inner(debug_outer);
     frame.render_widget(debug, debug_outer);
 
-    let text: Vec<Line> = text.iter().map(|l| Line::from(l.as_str())).collect();
+    let text: Vec<Line> = log.iter().map(|line| line.to_line()).collect();
     let text = Text::from(text);
 
     frame.render_widget(text, debug_inner);
 }
 
-fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) -> Vec<String> {
+fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) {
     let display = Block::new().title("Display").borders(Borders::ALL);
     let display_inner = display.inner(display_outer);
     frame.render_widget(display, display_outer);
@@ -88,8 +138,6 @@ fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) 
     let heights: Vec<_> = updates.iter().map(|update| update.height()).collect();
 
     let layout = Layout::vertical(heights).split(display_inner);
-
-    let lines = vec![];
 
     layout
         .iter()
@@ -101,6 +149,4 @@ fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) 
 
             frame.render_widget(Display::new(update), area);
         });
-
-    lines
 }

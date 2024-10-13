@@ -1,6 +1,11 @@
+use std::sync::{atomic::AtomicBool, Arc};
+
+use crate::{tui_tracing::LogLine, TuiTracing};
 use clap::Parser;
 use eyre::Result;
+use tokio::sync::broadcast;
 use tracing::error;
+use tracing_subscriber::filter::filter_fn;
 
 use crate::Args;
 
@@ -21,7 +26,10 @@ pub(crate) fn eyre() -> Result<()> {
     eyre_hook.install()?;
 
     std::panic::set_hook(Box::new(move |panic_info| {
-        if let Ok(mut t) = crate::ui::Tui::new() {
+        // TODO: Why won't move move this?
+        let gui_active = Arc::new(AtomicBool::new(true));
+
+        if let Ok(mut t) = crate::ui::Tui::new(gui_active) {
             if let Err(r) = t.exit() {
                 error!("Unable to exit Terminal: {:?}", r);
             }
@@ -56,8 +64,8 @@ pub(crate) fn eyre() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn tracing() {
-    use std::io::IsTerminal;
+pub(crate) fn tracing() -> (Arc<AtomicBool>, broadcast::Receiver<LogLine>) {
+    use std::{io::IsTerminal, sync::atomic::Ordering};
 
     use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
@@ -66,10 +74,6 @@ pub(crate) fn tracing() {
         fmt::{self, time::OffsetTime},
         EnvFilter,
     };
-
-    let fmt = fmt::layer()
-        .with_ansi(std::io::stdout().is_terminal())
-        .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"));
 
     let default_directive: Directive = LevelFilter::INFO.into();
 
@@ -88,13 +92,32 @@ pub(crate) fn tracing() {
         }
     };
 
-    tracing_subscriber::registry()
-        .with(filter)
-        .with(fmt)
-        .with(ErrorLayer::default())
-        .init();
-
     if let Some(error) = error {
         error!(?error, "Invalid RUST_LOG, using default filter \"info\"");
     }
+
+    let gui_active = Arc::new(AtomicBool::new(true));
+
+    let stdout = fmt::layer()
+        .with_ansi(std::io::stdout().is_terminal())
+        .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"));
+
+    let stdout_gui_active = gui_active.clone();
+    let stdout = stdout.with_filter(filter_fn(move |_| {
+        !stdout_gui_active.load(Ordering::Relaxed)
+    }));
+
+    let tui = TuiTracing::new();
+    let reader = tui.subscribe();
+    let tui_gui_active = gui_active.clone();
+    let tui = tui.with_filter(filter_fn(move |_| tui_gui_active.load(Ordering::Relaxed)));
+
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(stdout)
+        .with(tui)
+        .with(ErrorLayer::default())
+        .init();
+
+    (gui_active, reader)
 }
