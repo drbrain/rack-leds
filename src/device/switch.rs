@@ -1,5 +1,5 @@
 use eyre::Result;
-use tracing::{instrument, trace};
+use tracing::instrument;
 
 use crate::{
     collector::{Diff, Prometheus},
@@ -34,7 +34,7 @@ impl Switch {
         Layout::new(client, &self.labels).await
     }
 
-    #[instrument(skip_all, fields(labels = ?self.labels))]
+    #[instrument(level="debug", skip_all, ret, fields(labels = ?self.labels))]
     pub async fn update(&self, client: &Prometheus) -> Result<update::Switch> {
         self.receive
             .update(client.get_values(&self.receive_query).await?);
@@ -46,13 +46,6 @@ impl Switch {
 
         self.update_poe(client).await?;
         let poe_difference = self.poe.difference();
-
-        trace!(
-            receive = ?receive_difference,
-            transmit = ?transmit_difference,
-            poe = ?poe_difference,
-            "updated"
-        );
 
         Ok(update::Switch::new(
             receive_difference,

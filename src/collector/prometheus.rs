@@ -60,6 +60,8 @@ impl Prometheus {
         loop {
             interval.tick().await;
 
+            debug!("updating devices");
+
             let mut updates = Vec::with_capacity(self.devices.len());
 
             for device in self.devices.iter() {
