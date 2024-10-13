@@ -142,7 +142,7 @@ fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) 
 
 fn draw_tracing(debug_outer: Rect, frame: &mut Frame<'_>, log: &VecDeque<LogLine>) {
     let block = Block::new().title("Log").borders(Borders::ALL);
-    let debug_inner = block.inner(debug_outer);
+    let block_inner = block.inner(debug_outer);
 
     let text: Vec<Line> = log.iter().map(|line| line.to_line()).collect();
     let text = Text::from(text);
@@ -151,12 +151,12 @@ fn draw_tracing(debug_outer: Rect, frame: &mut Frame<'_>, log: &VecDeque<LogLine
 
     // NOTE: Scrolling is hard https://github.com/ratatui/ratatui/issues/174
     let line_offset = text
-        .line_count(debug_inner.width)
-        .saturating_sub(debug_inner.height.into())
+        .line_count(block_inner.width)
+        .saturating_sub(block_inner.height.into())
         .try_into()
         .unwrap_or(0);
 
     let text = text.scroll((line_offset, 0));
 
-    frame.render_widget(text, debug_inner);
+    frame.render_widget(text, block_inner);
 }
