@@ -1,7 +1,9 @@
+mod event_log;
 mod log_line;
 mod scope;
 mod to_scope_visitor;
 
+pub use event_log::EventLog;
 pub use log_line::LogLine;
 pub use scope::Scope;
 pub use to_scope_visitor::ToScopeVisitor;
