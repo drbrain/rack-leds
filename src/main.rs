@@ -16,31 +16,28 @@ pub use crate::ratatui_tracing::RatatuiTracing;
 pub use crate::update::Update;
 use collector::Collector;
 use eyre::Result;
-use ratatui_tracing::LogLine;
-use tokio::task::JoinSet;
-use tokio::{
-    signal::{
-        ctrl_c,
-        unix::{signal, SignalKind},
-    },
-    sync::broadcast,
+use ratatui_tracing::EventReceiver;
+use tokio::signal::{
+    ctrl_c,
+    unix::{signal, SignalKind},
 };
+use tokio::task::JoinSet;
 use tracing::info;
 use ui::App;
 
 fn main() -> Result<()> {
-    let (gui_active, tracing_receiver) = init::tracing();
+    let (gui_active, event_receiver) = init::tracing();
     init::eyre()?;
     let args = init::args()?;
 
-    tokio_main(args, gui_active, tracing_receiver)
+    tokio_main(args, gui_active, event_receiver)
 }
 
 #[tokio::main]
 async fn tokio_main(
     args: Args,
     gui_active: Arc<AtomicBool>,
-    tracing_receiver: broadcast::Receiver<LogLine>,
+    event_receiver: EventReceiver,
 ) -> Result<()> {
     let mut tasks = JoinSet::new();
 
@@ -71,7 +68,7 @@ async fn tokio_main(
     } else {
         let mut app = App::new(
             gui_active,
-            tracing_receiver,
+            event_receiver,
             args.tick_rate,
             args.frame_rate,
             updates,

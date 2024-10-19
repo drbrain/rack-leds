@@ -1,9 +1,8 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
-use crate::{ratatui_tracing::LogLine, RatatuiTracing};
+use crate::{ratatui_tracing::EventReceiver, RatatuiTracing};
 use clap::Parser;
 use eyre::Result;
-use tokio::sync::broadcast;
 use tracing::error;
 use tracing_subscriber::filter::filter_fn;
 
@@ -64,7 +63,7 @@ pub(crate) fn eyre() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn tracing() -> (Arc<AtomicBool>, broadcast::Receiver<LogLine>) {
+pub(crate) fn tracing() -> (Arc<AtomicBool>, EventReceiver) {
     use std::{io::IsTerminal, sync::atomic::Ordering};
 
     use tracing_error::ErrorLayer;

@@ -3,14 +3,10 @@ use std::collections::VecDeque;
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
 use text::ToLine;
-use tokio::sync::{
-    broadcast::{self, error::TryRecvError},
-    mpsc::UnboundedSender,
-    watch,
-};
+use tokio::sync::{broadcast::error::TryRecvError, mpsc::UnboundedSender, watch};
 
 use crate::{
-    ratatui_tracing::LogLine,
+    ratatui_tracing::{EventReceiver, LogLine},
     ui::{widgets::Display, Action, Component, Config},
     Update,
 };
@@ -19,21 +15,18 @@ pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     updates: watch::Receiver<Vec<Update>>,
-    tracing_receiver: broadcast::Receiver<LogLine>,
+    event_receiver: EventReceiver,
     log: VecDeque<LogLine>,
     log_max_lines: usize,
 }
 
 impl Home {
-    pub fn new(
-        updates: watch::Receiver<Vec<Update>>,
-        tracing_receiver: broadcast::Receiver<LogLine>,
-    ) -> Self {
+    pub fn new(updates: watch::Receiver<Vec<Update>>, event_receiver: EventReceiver) -> Self {
         Self {
             command_tx: Default::default(),
             config: Default::default(),
             updates,
-            tracing_receiver,
+            event_receiver,
             log: Default::default(),
             log_max_lines: 50,
         }
@@ -47,7 +40,7 @@ impl Home {
 
     fn update_log(&mut self) {
         loop {
-            match self.tracing_receiver.try_recv() {
+            match self.event_receiver.try_recv() {
                 Ok(log_line) => self.log.push_back(log_line),
                 Err(TryRecvError::Lagged(count)) => {
                     self.log.push_back(LogLine::missed(count));

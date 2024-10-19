@@ -4,11 +4,11 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{broadcast, mpsc, watch};
+use tokio::sync::{mpsc, watch};
 use tracing::{debug, info};
 
 use crate::{
-    ratatui_tracing::LogLine,
+    ratatui_tracing::EventReceiver,
     ui::{
         action::Action,
         components::{fps::FpsCounter, home::Home, Component},
@@ -41,7 +41,7 @@ pub enum Mode {
 impl App {
     pub fn new(
         gui_active: Arc<AtomicBool>,
-        tracing_receiver: broadcast::Receiver<LogLine>,
+        event_receiver: EventReceiver,
         tick_rate: f64,
         frame_rate: f64,
         updates: watch::Receiver<Vec<Update>>,
@@ -52,7 +52,7 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Home::new(updates, tracing_receiver)),
+                Box::new(Home::new(updates, event_receiver)),
                 Box::new(FpsCounter::default()),
             ],
             should_quit: false,

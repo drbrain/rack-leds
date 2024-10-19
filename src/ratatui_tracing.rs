@@ -12,6 +12,8 @@ use tracing::{
 };
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
+pub type EventReceiver = broadcast::Receiver<LogLine>;
+
 pub struct RatatuiTracing {
     sender: broadcast::Sender<LogLine>,
 }
@@ -23,7 +25,7 @@ impl RatatuiTracing {
         Self { sender }
     }
 
-    pub fn subscribe(&self) -> broadcast::Receiver<LogLine> {
+    pub fn subscribe(&self) -> EventReceiver {
         self.sender.subscribe()
     }
 }
