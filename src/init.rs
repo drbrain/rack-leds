@@ -1,6 +1,6 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
-use crate::{tui_tracing::LogLine, TuiTracing};
+use crate::{ratatui_tracing::LogLine, RatatuiTracing};
 use clap::Parser;
 use eyre::Result;
 use tokio::sync::broadcast;
@@ -107,7 +107,7 @@ pub(crate) fn tracing() -> (Arc<AtomicBool>, broadcast::Receiver<LogLine>) {
         !stdout_gui_active.load(Ordering::Relaxed)
     }));
 
-    let tui = TuiTracing::new();
+    let tui = RatatuiTracing::new();
     let reader = tui.subscribe();
     let tui_gui_active = gui_active.clone();
     let tui = tui.with_filter(filter_fn(move |_| tui_gui_active.load(Ordering::Relaxed)));

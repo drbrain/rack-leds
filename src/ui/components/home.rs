@@ -10,7 +10,7 @@ use tokio::sync::{
 };
 
 use crate::{
-    tui_tracing::LogLine,
+    ratatui_tracing::LogLine,
     ui::{widgets::Display, Action, Component, Config},
     Update,
 };

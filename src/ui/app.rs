@@ -8,7 +8,7 @@ use tokio::sync::{broadcast, mpsc, watch};
 use tracing::{debug, info};
 
 use crate::{
-    tui_tracing::LogLine,
+    ratatui_tracing::LogLine,
     ui::{
         action::Action,
         components::{fps::FpsCounter, home::Home, Component},

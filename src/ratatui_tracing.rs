@@ -181,11 +181,11 @@ impl Visit for ToFieldsVisitor {
     }
 }
 
-pub struct TuiTracing {
+pub struct RatatuiTracing {
     sender: broadcast::Sender<LogLine>,
 }
 
-impl TuiTracing {
+impl RatatuiTracing {
     pub fn new() -> Self {
         let (sender, _) = broadcast::channel(100);
 
@@ -197,13 +197,13 @@ impl TuiTracing {
     }
 }
 
-impl Default for TuiTracing {
+impl Default for RatatuiTracing {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<S> Layer<S> for TuiTracing
+impl<S> Layer<S> for RatatuiTracing
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {

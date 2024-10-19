@@ -4,7 +4,7 @@ mod config;
 mod device;
 mod init;
 mod layout;
-mod tui_tracing;
+mod ratatui_tracing;
 mod ui;
 mod update;
 
@@ -12,10 +12,11 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 pub use crate::args::Args;
 pub use crate::layout::Layout;
-pub use crate::tui_tracing::TuiTracing;
+pub use crate::ratatui_tracing::RatatuiTracing;
 pub use crate::update::Update;
 use collector::Collector;
 use eyre::Result;
+use ratatui_tracing::LogLine;
 use tokio::task::JoinSet;
 use tokio::{
     signal::{
@@ -25,7 +26,6 @@ use tokio::{
     sync::broadcast,
 };
 use tracing::info;
-use tui_tracing::LogLine;
 use ui::App;
 
 fn main() -> Result<()> {
