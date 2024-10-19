@@ -1,23 +1,23 @@
+mod event;
 mod event_log;
-mod log_line;
 mod scope;
 mod to_scope_visitor;
 
+pub use event::Event;
 pub use event_log::EventLog;
-pub use log_line::LogLine;
 pub use scope::Scope;
 pub use to_scope_visitor::ToScopeVisitor;
 use tokio::sync::broadcast;
 use tracing::{
     span::{Attributes, Id, Record},
-    Event, Subscriber,
+    Subscriber,
 };
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
-pub type EventReceiver = broadcast::Receiver<LogLine>;
+pub type EventReceiver = broadcast::Receiver<Event>;
 
 pub struct RatatuiTracing {
-    sender: broadcast::Sender<LogLine>,
+    sender: broadcast::Sender<Event>,
 }
 
 impl RatatuiTracing {
@@ -42,8 +42,8 @@ impl<S> Layer<S> for RatatuiTracing
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    fn on_event(&self, event: &Event<'_>, context: Context<'_, S>) {
-        let log_line = LogLine::new(event, &context);
+    fn on_event(&self, event: &tracing::Event<'_>, context: Context<'_, S>) {
+        let log_line = Event::new(event, &context);
 
         self.sender.send(log_line).ok();
     }

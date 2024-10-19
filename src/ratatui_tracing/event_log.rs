@@ -7,11 +7,11 @@ use ratatui::{
 use text::ToLine;
 use tokio::sync::broadcast::error::TryRecvError;
 
-use crate::ratatui_tracing::{EventReceiver, LogLine};
+use crate::ratatui_tracing::{Event, EventReceiver};
 
 pub struct EventLog {
     event_receiver: EventReceiver,
-    log: VecDeque<LogLine>,
+    log: VecDeque<Event>,
     max_lines: usize,
 }
 
@@ -24,7 +24,7 @@ impl EventLog {
         }
     }
 
-    pub fn log(&self) -> &VecDeque<LogLine> {
+    pub fn log(&self) -> &VecDeque<Event> {
         &self.log
     }
 
@@ -45,7 +45,7 @@ impl EventLog {
             match self.event_receiver.try_recv() {
                 Ok(log_line) => self.log.push_back(log_line),
                 Err(TryRecvError::Lagged(count)) => {
-                    self.log.push_back(LogLine::missed(count));
+                    self.log.push_back(Event::missed(count));
                 }
                 Err(TryRecvError::Closed) | Err(TryRecvError::Empty) => break,
             }

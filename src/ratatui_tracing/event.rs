@@ -4,18 +4,18 @@ use ratatui::{
     text::{Line, Span, ToLine},
 };
 use std::collections::HashMap;
-use tracing::{Event, Level, Subscriber};
+use tracing::{Level, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 #[derive(Clone)]
-pub struct LogLine {
+pub struct Event {
     scopes: Vec<Scope>,
     target: String,
     level: Level,
     fields: HashMap<&'static str, String>,
 }
 
-impl LogLine {
+impl Event {
     pub fn missed(count: u64) -> Self {
         let fields = HashMap::from([("count", format!("{count}"))]);
 
@@ -28,7 +28,7 @@ impl LogLine {
     }
 
     pub fn new(
-        event: &Event,
+        event: &tracing::Event,
         context: &Context<'_, impl Subscriber + for<'a> LookupSpan<'a>>,
     ) -> Self {
         let mut visitor = ToScopeVisitor::default();
@@ -68,7 +68,7 @@ impl LogLine {
     }
 }
 
-impl ToLine for LogLine {
+impl ToLine for Event {
     fn to_line(&self) -> Line<'_> {
         let mut line = Line::default();
 
