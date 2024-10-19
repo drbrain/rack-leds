@@ -7,7 +7,7 @@ use ratatui::{
 use tokio::sync::broadcast;
 use tracing::{
     field::{Field, Visit},
-    span::{Attributes, Id},
+    span::{Attributes, Id, Record},
     Event, Level, Subscriber,
 };
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
@@ -134,6 +134,10 @@ impl Scope {
     fn new(name: String, fields: HashMap<&'static str, String>) -> Self {
         Self { name, fields }
     }
+
+    fn extend(&mut self, fields: HashMap<&'static str, String>) {
+        self.fields.extend(fields);
+    }
 }
 
 #[derive(Default)]
@@ -228,5 +232,25 @@ where
         }
     }
 
-    // TODO: on_record()
+    fn on_record(&self, id: &Id, values: &Record<'_>, context: Context<'_, S>) {
+        let span = context
+            .span(id)
+            .expect("Span not found, this is a tracing bug");
+
+        let mut extensions = span.extensions_mut();
+
+        let mut visitor = ToFieldsVisitor::default();
+        values.record(&mut visitor);
+        let fields = visitor.fields();
+
+        if let Some(scope) = extensions.get_mut::<Scope>() {
+            scope.extend(fields);
+        } else {
+            let name = span.name().to_string();
+
+            let scope = Scope::new(name, fields);
+
+            extensions.insert(scope);
+        }
+    }
 }
