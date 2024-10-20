@@ -69,6 +69,7 @@ impl Widget for &EventLog {
         let text = Paragraph::new(text).block(block).wrap(Wrap { trim: false });
 
         // NOTE: Scrolling is hard https://github.com/ratatui/ratatui/issues/174
+        // and Lists don't allow wrapping https://github.com/ratatui/ratatui/issues/128
         let line_offset = text
             .line_count(block_inner.width)
             .saturating_sub(block_inner.height.into())
