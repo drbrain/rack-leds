@@ -10,17 +10,19 @@ use tokio::sync::broadcast::error::TryRecvError;
 use crate::ratatui_tracing::{Event, EventReceiver};
 
 pub struct EventLog {
+    closed: bool,
     event_receiver: EventReceiver,
     log: VecDeque<Event>,
-    max_lines: usize,
+    max_scrollback: usize,
 }
 
 impl EventLog {
-    pub fn new(event_receiver: EventReceiver, max_lines: usize) -> Self {
+    pub fn new(event_receiver: EventReceiver, max_scrollback: usize) -> Self {
         Self {
+            closed: false,
             event_receiver,
             log: Default::default(),
-            max_lines,
+            max_scrollback,
         }
     }
 
@@ -29,13 +31,13 @@ impl EventLog {
     }
 
     pub fn set_max_lines(&mut self, max_lines: usize) {
-        self.max_lines = max_lines.saturating_add(10);
+        self.max_scrollback = max_lines.saturating_add(10);
 
         self.trim();
     }
 
     pub fn trim(&mut self) {
-        while self.log.len() > self.max_lines {
+        while self.log.len() > self.max_scrollback {
             self.log.pop_front();
         }
     }
