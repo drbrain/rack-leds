@@ -16,12 +16,21 @@ pub struct Event {
 }
 
 impl Event {
+    pub fn closed() -> Event {
+        Self {
+            scopes: Default::default(),
+            target: "tracing event channel closed".into(),
+            level: Level::WARN,
+            fields: Default::default(),
+        }
+    }
+
     pub fn missed(count: u64) -> Self {
         let fields = HashMap::from([("count", format!("{count}"))]);
 
         Self {
-            scopes: vec![],
-            target: "missed".into(),
+            scopes: Default::default(),
+            target: "tracing events missed".into(),
             level: Level::WARN,
             fields,
         }

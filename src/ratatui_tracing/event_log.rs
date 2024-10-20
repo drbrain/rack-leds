@@ -40,14 +40,26 @@ impl EventLog {
         }
     }
 
+    /// Move as many items as possible from the channel to the event log
+    ///
+    /// If events were missed when reading from the channel a missing event is synthesized
     pub fn update(&mut self) {
+        if self.closed {
+            return;
+        }
+
         loop {
             match self.event_receiver.try_recv() {
                 Ok(log_line) => self.log.push_back(log_line),
+                Err(TryRecvError::Closed) => {
+                    self.log.push_back(Event::closed());
+                    self.trim();
+                    break;
+                }
+                Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Lagged(count)) => {
                     self.log.push_back(Event::missed(count));
                 }
-                Err(TryRecvError::Closed) | Err(TryRecvError::Empty) => break,
             }
 
             self.trim();
