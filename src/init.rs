@@ -1,20 +1,24 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
-use crate::{ratatui_tracing::EventReceiver, RatatuiTracing};
+use crate::{ratatui_tracing::EventReceiver, Args, RatatuiTracing};
 use clap::Parser;
+use color_eyre::config::HookBuilder;
 use eyre::Result;
+use std::{io::IsTerminal, sync::atomic::Ordering};
 use tracing::error;
-use tracing_subscriber::filter::filter_fn;
-
-use crate::Args;
+use tracing_error::ErrorLayer;
+use tracing_subscriber::{
+    filter::{filter_fn, Directive, LevelFilter},
+    fmt::{self, time::OffsetTime},
+    prelude::*,
+    EnvFilter, Layer,
+};
 
 pub(crate) fn args() -> Result<Args> {
     Ok(Args::parse())
 }
 
 pub(crate) fn eyre() -> Result<()> {
-    use color_eyre::config::HookBuilder;
-
     let (panic_hook, eyre_hook) = HookBuilder::new()
         .capture_span_trace_by_default(true)
         .display_env_section(false)
@@ -64,16 +68,38 @@ pub(crate) fn eyre() -> Result<()> {
 }
 
 pub(crate) fn tracing() -> (Arc<AtomicBool>, EventReceiver) {
-    use std::{io::IsTerminal, sync::atomic::Ordering};
+    let (gui_active, reader, log) = log_layer();
 
-    use tracing_error::ErrorLayer;
-    use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{
-        filter::{Directive, LevelFilter},
-        fmt::{self, time::OffsetTime},
-        EnvFilter,
-    };
+    tracing_subscriber::registry()
+        .with(log)
+        .with(ErrorLayer::default())
+        .init();
 
+    (gui_active, reader)
+}
+
+/// A layer for logging either to stdout or ratatui depending on which is active
+///
+/// The layer will be filtered by RUST_LOG if available
+fn log_layer() -> (
+    Arc<AtomicBool>,
+    tokio::sync::broadcast::Receiver<crate::ratatui_tracing::Event>,
+    Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync>,
+) {
+    let filter = log_filter();
+
+    let gui_active = Arc::new(AtomicBool::new(true));
+
+    let stdout = stdout_layer(&gui_active);
+
+    let (reader, tui) = ratatui_layer(&gui_active);
+
+    let log = stdout.and_then(tui).with_filter(filter).boxed();
+    (gui_active, reader, log)
+}
+
+/// Create a filter from RUST_LOG
+fn log_filter() -> EnvFilter {
     let default_directive: Directive = LevelFilter::INFO.into();
 
     let result = EnvFilter::builder()
@@ -94,29 +120,38 @@ pub(crate) fn tracing() -> (Arc<AtomicBool>, EventReceiver) {
     if let Some(error) = error {
         error!(?error, "Invalid RUST_LOG, using default filter \"info\"");
     }
+    filter
+}
 
-    let gui_active = Arc::new(AtomicBool::new(true));
-
+/// Log to stdout when gui_active is false
+fn stdout_layer(
+    gui_active: &Arc<AtomicBool>,
+) -> Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync> {
     let stdout = fmt::layer()
         .with_ansi(std::io::stdout().is_terminal())
         .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"));
 
     let stdout_gui_active = gui_active.clone();
-    let stdout = stdout.with_filter(filter_fn(move |_| {
-        !stdout_gui_active.load(Ordering::Relaxed)
-    }));
 
+    stdout
+        .with_filter(filter_fn(move |_| {
+            !stdout_gui_active.load(Ordering::Relaxed)
+        }))
+        .boxed()
+}
+
+/// Log to ratatui if gui_active is true
+fn ratatui_layer(
+    gui_active: &Arc<AtomicBool>,
+) -> (
+    tokio::sync::broadcast::Receiver<crate::ratatui_tracing::Event>,
+    Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync>,
+) {
     let tui = RatatuiTracing::new();
     let reader = tui.subscribe();
     let tui_gui_active = gui_active.clone();
-    let tui = tui.with_filter(filter_fn(move |_| tui_gui_active.load(Ordering::Relaxed)));
-
-    tracing_subscriber::registry()
-        .with(filter)
-        .with(stdout)
-        .with(tui)
-        .with(ErrorLayer::default())
-        .init();
-
-    (gui_active, reader)
+    let tui = tui
+        .with_filter(filter_fn(move |_| tui_gui_active.load(Ordering::Relaxed)))
+        .boxed();
+    (reader, tui)
 }
