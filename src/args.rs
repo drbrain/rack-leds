@@ -12,6 +12,10 @@ pub struct Args {
     #[arg(short, long, value_name = "DISPLAY_CONFIG")]
     config: PathBuf,
 
+    /// Enable console-subscriber for use with tokyo-console
+    #[arg(long)]
+    pub console: bool,
+
     /// Don't show a UI
     #[arg(long, default_value_t = false)]
     pub headless: bool,

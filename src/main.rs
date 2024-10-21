@@ -30,9 +30,9 @@ use ui::{Action, App};
 pub use update::Update;
 
 fn main() -> Result<()> {
-    let (gui_active, event_receiver) = init::tracing();
-    init::eyre()?;
     let args = init::args()?;
+    let (gui_active, event_receiver) = init::tracing(&args);
+    init::eyre()?;
 
     tokio_main(args, gui_active, event_receiver)
 }

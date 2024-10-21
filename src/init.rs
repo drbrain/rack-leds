@@ -67,13 +67,18 @@ pub(crate) fn eyre() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn tracing() -> (Arc<AtomicBool>, EventReceiver) {
+pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver) {
     let (gui_active, reader, log) = log_layer();
 
-    tracing_subscriber::registry()
+    let registry = tracing_subscriber::registry()
         .with(log)
-        .with(ErrorLayer::default())
-        .init();
+        .with(ErrorLayer::default());
+
+    if args.console {
+        registry.with(console_subscriber::spawn()).init();
+    } else {
+        registry.init();
+    };
 
     (gui_active, reader)
 }

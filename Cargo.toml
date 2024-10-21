@@ -12,6 +12,7 @@ color-art = "0.3.8"
 color-eyre = "0.6.3"
 colorgrad = "0.7.0"
 config = "0.14.0"
+console-subscriber = "0.4.0"
 crossterm = { version = "0.28.1", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"
 directories = "5.0.1"
