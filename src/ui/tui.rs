@@ -25,10 +25,10 @@ use serde::{Deserialize, Serialize};
 use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
-    time::interval,
+    time::{interval, MissedTickBehavior},
 };
 use tokio_util::sync::CancellationToken;
-use tracing::error;
+use tracing::{debug, error, instrument};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
@@ -69,7 +69,7 @@ impl Tui {
             cancellation_token: CancellationToken::new(),
             event_rx,
             event_tx,
-            frame_rate: 60.0,
+            frame_rate: 4.0,
             tick_rate: 4.0,
             mouse: false,
             paste: false,
@@ -105,11 +105,15 @@ impl Tui {
             self.tick_rate,
             self.frame_rate,
         );
-        self.task = tokio::spawn(async {
-            event_loop.await;
-        });
+        self.task = tokio::task::Builder::new()
+            .name("event loop")
+            .spawn(async {
+                event_loop.await;
+            })
+            .expect("Failed to spawn event loop");
     }
 
+    #[instrument(skip_all)]
     async fn event_loop(
         event_tx: UnboundedSender<Event>,
         cancellation_token: CancellationToken,
@@ -117,13 +121,22 @@ impl Tui {
         frame_rate: f64,
     ) {
         let mut event_stream = EventStream::new();
-        let mut tick_interval = interval(Duration::from_secs_f64(1.0 / tick_rate));
-        let mut render_interval = interval(Duration::from_secs_f64(1.0 / frame_rate));
+
+        let tick_period = Duration::from_secs_f64(1.0 / tick_rate);
+        let render_period = Duration::from_secs_f64(1.0 / frame_rate);
+
+        debug!(?tick_period, ?render_period, "started");
+
+        let mut tick_interval = interval(tick_period);
+        tick_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        let mut render_interval = interval(render_period);
+        render_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
         // if this fails, then it's likely a bug in the calling code
         event_tx
             .send(Event::Init)
             .expect("failed to send init event");
+
         loop {
             let event = tokio::select! {
                 _ = cancellation_token.cancelled() => {
@@ -139,17 +152,21 @@ impl Tui {
                         CrosstermEvent::FocusLost => Event::FocusLost,
                         CrosstermEvent::FocusGained => Event::FocusGained,
                         CrosstermEvent::Paste(s) => Event::Paste(s),
-                        _ => continue, // ignore other events
+                        _ => {continue}, // ignore other events
                     }
                     Some(Err(_)) => Event::Error,
                     None => break, // the event stream has stopped and will not produce any more events
                 },
             };
+
             if event_tx.send(event).is_err() {
                 // the receiver has been dropped, so there's no point in continuing the loop
                 break;
             }
         }
+
+        debug!("terminated");
+
         cancellation_token.cancel();
     }
 

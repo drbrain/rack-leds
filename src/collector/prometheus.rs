@@ -45,7 +45,10 @@ impl Prometheus {
     pub fn collect(self) -> (watch::Receiver<Vec<Update>>, JoinHandle<Result<()>>) {
         let update = self.update.subscribe();
 
-        let collector = tokio::spawn(self.collector());
+        let collector = tokio::task::Builder::new()
+            .name("collector inner")
+            .spawn(self.collector())
+            .expect("Failed to spawn collector");
 
         (update, collector)
     }

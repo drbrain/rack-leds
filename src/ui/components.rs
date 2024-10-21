@@ -1,3 +1,4 @@
+use crate::ui::{tui::Event, Action, Config};
 use color_eyre::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{
@@ -5,8 +6,6 @@ use ratatui::{
     Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
-
-use crate::ui::{tui::Event, Action, Config};
 
 pub mod fps;
 pub mod home;
@@ -29,6 +28,7 @@ pub trait Component {
         let _ = tx; // to appease clippy
         Ok(())
     }
+
     /// Register a configuration handler that provides configuration settings if necessary.
     ///
     /// # Arguments
@@ -42,6 +42,7 @@ pub trait Component {
         let _ = config; // to appease clippy
         Ok(())
     }
+
     /// Initialize the component with a specified area if necessary.
     ///
     /// # Arguments
@@ -55,6 +56,7 @@ pub trait Component {
         let _ = area; // to appease clippy
         Ok(())
     }
+
     /// Handle incoming events and produce actions if necessary.
     ///
     /// # Arguments
@@ -85,6 +87,7 @@ pub trait Component {
         let _ = key; // to appease clippy
         Ok(None)
     }
+
     /// Handle mouse events and produce actions if necessary.
     ///
     /// # Arguments
@@ -98,6 +101,7 @@ pub trait Component {
         let _ = mouse; // to appease clippy
         Ok(None)
     }
+
     /// Update the state of the component based on a received action. (REQUIRED)
     ///
     /// # Arguments
@@ -111,6 +115,7 @@ pub trait Component {
         let _ = action; // to appease clippy
         Ok(None)
     }
+
     /// Render the component on the screen. (REQUIRED)
     ///
     /// # Arguments

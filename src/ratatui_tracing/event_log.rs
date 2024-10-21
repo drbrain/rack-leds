@@ -56,6 +56,7 @@ impl EventLog {
                 Err(TryRecvError::Closed) => {
                     self.log.push_back(Event::closed());
                     self.trim();
+                    self.closed = true;
                     break;
                 }
                 Err(TryRecvError::Empty) => break,

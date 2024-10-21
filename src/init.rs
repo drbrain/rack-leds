@@ -33,8 +33,8 @@ pub(crate) fn eyre() -> Result<()> {
         let gui_active = Arc::new(AtomicBool::new(true));
 
         if let Ok(mut t) = crate::ui::Tui::new(gui_active) {
-            if let Err(r) = t.exit() {
-                error!("Unable to exit Terminal: {:?}", r);
+            if let Err(report) = t.exit() {
+                error!(?report, "unable to exit terminal");
             }
         }
 

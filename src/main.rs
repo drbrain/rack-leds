@@ -10,20 +10,24 @@ mod update;
 
 use std::sync::{atomic::AtomicBool, Arc};
 
-pub use crate::args::Args;
-pub use crate::layout::Layout;
-pub use crate::ratatui_tracing::RatatuiTracing;
-pub use crate::update::Update;
+pub use args::Args;
 use collector::Collector;
 use eyre::Result;
+pub use layout::Layout;
 use ratatui_tracing::EventReceiver;
-use tokio::signal::{
-    ctrl_c,
-    unix::{signal, SignalKind},
-};
+pub use ratatui_tracing::RatatuiTracing;
+use tokio::sync::mpsc;
 use tokio::task::JoinSet;
-use tracing::info;
-use ui::App;
+use tokio::{
+    signal::{
+        ctrl_c,
+        unix::{signal, SignalKind},
+    },
+    task::LocalSet,
+};
+use tracing::{info, instrument};
+use ui::{Action, App};
+pub use update::Update;
 
 fn main() -> Result<()> {
     let (gui_active, event_receiver) = init::tracing();
@@ -43,29 +47,13 @@ async fn tokio_main(
 
     let collector = Collector::new(&args)?;
     let updates = collector.subscribe();
-    tasks.spawn(async move { collector.wait().await });
+    tasks
+        .build_task()
+        .name("collector outer")
+        .spawn(async move { collector.wait().await })?;
 
-    tasks.spawn(async {
-        ctrl_c().await?;
-
-        info!("shutdown requested");
-
-        Ok(())
-    });
-
-    tasks.spawn(async {
-        signal(SignalKind::terminate())?.recv().await;
-
-        info!("shutdown requested");
-
-        Ok(())
-    });
-
-    if args.headless {
-        if let Some(result) = tasks.join_next().await {
-            result??;
-        }
-    } else {
+    if !args.headless {
+        info!("starting TUI");
         let mut app = App::new(
             gui_active,
             event_receiver,
@@ -73,10 +61,76 @@ async fn tokio_main(
             args.frame_rate,
             updates,
         )?;
+
         app.run().await?;
+
+        wait_for_sigint(&mut tasks, Some(app.action_tx()))?;
+        wait_for_sigterm(&mut tasks, Some(app.action_tx()))?;
+
+        let local_set = LocalSet::new();
+
+        tasks
+            .build_task()
+            .name("app")
+            .spawn_local_on(async move { app.run().await }, &local_set)?;
+
+        local_set
+            .run_until(async { first_termination(tasks).await })
+            .await?;
+    } else {
+        info!("starting headless");
+        wait_for_sigint(&mut tasks, None)?;
+        wait_for_sigterm(&mut tasks, None)?;
+        first_termination(tasks).await?;
     }
 
-    tasks.abort_all();
+    Ok(())
+}
+
+#[instrument(skip_all)]
+fn wait_for_sigint(
+    tasks: &mut JoinSet<Result<()>>,
+    sender: Option<mpsc::UnboundedSender<Action>>,
+) -> Result<()> {
+    tasks.build_task().name("SIGINT").spawn(async move {
+        loop {
+            ctrl_c().await?;
+
+            info!("shutdown requested");
+
+            if let Some(ref sender) = sender {
+                sender.send(Action::Quit).ok();
+            };
+        }
+    })?;
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+fn wait_for_sigterm(
+    tasks: &mut JoinSet<Result<()>>,
+    sender: Option<mpsc::UnboundedSender<Action>>,
+) -> Result<()> {
+    tasks.build_task().name("SIGTERM").spawn(async move {
+        loop {
+            signal(SignalKind::terminate())?.recv().await;
+
+            info!("shutdown requested");
+
+            if let Some(ref sender) = sender {
+                sender.send(Action::Quit).ok();
+            };
+        }
+    })?;
+
+    Ok(())
+}
+
+async fn first_termination(mut tasks: JoinSet<Result<()>>) -> Result<()> {
+    if let Some(result) = tasks.join_next().await {
+        result??;
+    }
 
     Ok(())
 }
