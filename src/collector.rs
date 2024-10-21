@@ -1,6 +1,8 @@
+mod absolute;
 mod diff;
 mod prometheus;
 
+pub use absolute::Absolute;
 pub use diff::Diff;
 use eyre::{Context, Result};
 pub use prometheus::Prometheus;

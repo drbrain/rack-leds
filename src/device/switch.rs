@@ -2,7 +2,7 @@ use eyre::Result;
 use tracing::instrument;
 
 use crate::{
-    collector::{Diff, Prometheus},
+    collector::{Absolute, Diff, Prometheus},
     update, Layout,
 };
 
@@ -12,7 +12,7 @@ pub struct Switch {
     receive_query: String,
     transmit: Diff,
     transmit_query: String,
-    poe: Diff,
+    poe: Absolute,
     poe_query: String,
 }
 
@@ -45,12 +45,11 @@ impl Switch {
         let transmit_difference = self.transmit.difference();
 
         self.update_poe(client).await?;
-        let poe_difference = self.poe.difference();
 
         Ok(update::Switch::new(
             receive_difference,
             transmit_difference,
-            poe_difference,
+            (&self.poe).into(),
         ))
     }
 
