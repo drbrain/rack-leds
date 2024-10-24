@@ -1,11 +1,12 @@
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::{mpsc::UnboundedSender, watch};
+use tracing::error;
 
 use crate::{
     ratatui_tracing::{EventLog, EventReceiver},
     ui::{widgets::Display, Action, Component, Config},
-    Update,
+    PngBuilder, Update,
 };
 
 pub struct Home {
@@ -102,4 +103,9 @@ fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) 
 
             frame.render_widget(Display::new(update), area);
         });
+
+    match PngBuilder::new(frame, &display_inner).build() {
+        Ok(_png) => (), // TODO: serve as HTTP
+        Err(e) => error!(?e, "error building PNG"),
+    }
 }
