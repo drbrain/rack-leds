@@ -2,6 +2,7 @@ mod args;
 mod collector;
 mod config;
 mod device;
+mod http;
 mod init;
 mod layout;
 mod png_builder;
@@ -12,13 +13,15 @@ mod update;
 use std::sync::{atomic::AtomicBool, Arc};
 
 pub use args::Args;
+use bytes::Bytes;
 use collector::Collector;
 use eyre::Result;
+pub use http::Http;
 pub use layout::Layout;
 pub use png_builder::PngBuilder;
 use ratatui_tracing::EventReceiver;
 pub use ratatui_tracing::RatatuiTracing;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 use tokio::task::JoinSet;
 use tokio::{
     signal::{
@@ -54,6 +57,10 @@ async fn tokio_main(
         .name("collector outer")
         .spawn(async move { collector.wait().await })?;
 
+    let (png_sender, png_receiver) = watch::channel(Bytes::new());
+    let http = Http::new(args.server_address, png_receiver)?;
+    tasks.build_task().name("http server").spawn(http.run())?;
+
     if !args.headless {
         info!("starting TUI");
         let mut app = App::new(
@@ -62,6 +69,7 @@ async fn tokio_main(
             args.tick_rate,
             args.frame_rate,
             updates,
+            png_sender,
         )?;
 
         app.run().await?;

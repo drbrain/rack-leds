@@ -1,9 +1,16 @@
-use std::{path::PathBuf, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+    time::Duration,
+};
 
 use clap::Parser;
 use eyre::Result;
 
 use crate::config::Config;
+
+const DEFAULT_HTTP_SERVER_ADDR: SocketAddr =
+    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9753);
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -31,6 +38,14 @@ pub struct Args {
     /// Prometheus query timeout in milliseconds
     #[arg(long, value_name = "MILLISECONDS", value_parser = millis)]
     timeout: Option<Duration>,
+
+    #[arg(
+        short = 'H',
+        long,
+        value_name = "ADDR",
+        default_value_t = DEFAULT_HTTP_SERVER_ADDR
+    )]
+    pub server_address: SocketAddr,
 
     /// Frame rate, i.e. number of frames per second
     #[arg(short, long, value_name = "FLOAT", default_value_t = 8.0)]

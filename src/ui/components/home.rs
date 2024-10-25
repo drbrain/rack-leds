@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::{mpsc::UnboundedSender, watch};
@@ -13,17 +14,23 @@ pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     updates: watch::Receiver<Vec<Update>>,
+    png_sender: watch::Sender<Bytes>,
     log: EventLog,
 }
 
 impl Home {
-    pub fn new(updates: watch::Receiver<Vec<Update>>, event_receiver: EventReceiver) -> Self {
+    pub fn new(
+        updates: watch::Receiver<Vec<Update>>,
+        png_sender: watch::Sender<Bytes>,
+        event_receiver: EventReceiver,
+    ) -> Self {
         let log = EventLog::new(event_receiver, 50);
 
         Self {
             command_tx: Default::default(),
             config: Default::default(),
             updates,
+            png_sender,
             log,
         }
     }
@@ -76,7 +83,9 @@ impl Component for Home {
 
         let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display);
 
-        draw_display(display, frame, &updates);
+        if let Some(png) = draw_display(display, frame, &updates) {
+            self.png_sender.send_replace(png);
+        };
 
         frame.render_widget(&self.log, debug);
 
@@ -84,7 +93,7 @@ impl Component for Home {
     }
 }
 
-fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) {
+fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) -> Option<Bytes> {
     let display = Block::new().title("Display").borders(Borders::ALL);
     let display_inner = display.inner(display_outer);
     frame.render_widget(display, display_outer);
@@ -105,7 +114,10 @@ fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) 
         });
 
     match PngBuilder::new(frame, &display_inner).build() {
-        Ok(_png) => (), // TODO: serve as HTTP
-        Err(e) => error!(?e, "error building PNG"),
+        Ok(png) => Some(png), // TODO: serve as HTTP
+        Err(e) => {
+            error!(?e, "error building PNG");
+            None
+        }
     }
 }

@@ -1,5 +1,6 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
+use bytes::Bytes;
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
@@ -45,6 +46,7 @@ impl App {
         tick_rate: f64,
         frame_rate: f64,
         updates: watch::Receiver<Vec<Update>>,
+        png_sender: watch::Sender<Bytes>,
     ) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
 
@@ -53,7 +55,7 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Home::new(updates, event_receiver)),
+                Box::new(Home::new(updates, png_sender, event_receiver)),
                 Box::new(FpsCounter::default()),
             ],
             should_quit: false,

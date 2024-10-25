@@ -19,7 +19,10 @@ derive_deref = "1.1.1"
 directories = "5.0.1"
 eyre = "0.6.12"
 futures = "0.3.30"
+http-body-util = "0.1.2"
 human-panic = "2.0.1"
+hyper = { version = "1.5.0", features = ["http1", "server"] }
+hyper-util = { version = "0.1.9", features = ["tokio"] }
 itertools = "0.13.0"
 json5 = "0.4.1"
 libc = "0.2.159"
