@@ -1784,6 +1784,7 @@ dependencies = [
  "eyre",
  "futures",
  "http-body-util",
+ "httpdate",
  "human-panic",
  "hyper",
  "hyper-util",

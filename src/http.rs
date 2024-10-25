@@ -1,36 +1,37 @@
-use std::{future::Future, net::SocketAddr, pin::Pin};
+use std::{future::Future, net::SocketAddr, pin::Pin, time::Duration};
 
 use bytes::Bytes;
 use eyre::Result;
 use http_body_util::Full;
+use httpdate::fmt_http_date;
 use hyper::{
     body::Incoming, header::ALLOW, server::conn::http1, service::Service, Method, Request,
     Response, StatusCode,
 };
 use hyper_util::rt::TokioIo;
-use tokio::{
-    net::{TcpListener, TcpStream},
-    sync::watch,
-};
+use tokio::net::{TcpListener, TcpStream};
 use tracing::instrument;
+
+use crate::png_builder::PngReceiver;
 
 pub struct Http {
     addr: SocketAddr,
-    png: watch::Receiver<Bytes>,
+    png: PngReceiver,
+    period: Duration,
 }
 
 impl Http {
-    pub fn new(addr: SocketAddr, png: watch::Receiver<Bytes>) -> Result<Self> {
-        Ok(Self { addr, png })
+    pub fn new(addr: SocketAddr, png: PngReceiver, period: Duration) -> Result<Self> {
+        Ok(Self { addr, png, period })
     }
 
     pub async fn run(self) -> Result<()> {
-        let Self { addr, png } = self;
+        let Self { addr, png, period } = self;
 
         let listener = TcpListener::bind(addr).await?;
         let mut task_id = 0usize;
 
-        let service = PngService::new(png);
+        let service = PngService::new(png, period);
 
         loop {
             let (stream, _) = listener.accept().await?;
@@ -51,19 +52,23 @@ impl Http {
 
 #[instrument(level = "DEBUG", skip_all, ret, fields(id = _id))]
 async fn handle_client(_id: usize, io: TokioIo<TcpStream>, service: PngService) -> Result<()> {
-    http1::Builder::new().serve_connection(io, service).await?;
+    http1::Builder::new()
+        .auto_date_header(true)
+        .serve_connection(io, service)
+        .await?;
 
     Ok(())
 }
 
 #[derive(Clone)]
 struct PngService {
-    png: watch::Receiver<Bytes>,
+    png: PngReceiver,
+    period: Duration,
 }
 
 impl PngService {
-    fn new(png: watch::Receiver<Bytes>) -> Self {
-        Self { png }
+    fn new(png: PngReceiver, period: Duration) -> Self {
+        Self { png, period }
     }
 }
 
@@ -92,11 +97,14 @@ impl Service<Request<Incoming>> for PngService {
             });
         }
 
-        let current_png = self.png.borrow().clone();
+        let (current_png, updated) = self.png.borrow().clone();
 
-        Box::pin(async {
+        let expires = updated + self.period;
+
+        Box::pin(async move {
             Ok(Response::builder()
                 .status(StatusCode::OK)
+                .header("Expires", fmt_http_date(expires))
                 .body(Full::new(current_png))
                 .unwrap())
         })

@@ -1,8 +1,19 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    time::SystemTime,
+};
 
 use bytes::{Bytes, BytesMut};
 use eyre::{Context, Result};
 use ratatui::{layout::Rect, style::Color, Frame};
+use tokio::sync::watch;
+
+pub fn update_channel() -> (PngSender, PngReceiver) {
+    watch::channel((Bytes::new(), SystemTime::now()))
+}
+
+pub type PngReceiver = watch::Receiver<(Bytes, SystemTime)>;
+pub type PngSender = watch::Sender<(Bytes, SystemTime)>;
 
 pub struct PngBuilder {
     height: u32,

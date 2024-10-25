@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use bytes::Bytes;
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
@@ -5,6 +7,7 @@ use tokio::sync::{mpsc::UnboundedSender, watch};
 use tracing::error;
 
 use crate::{
+    png_builder::PngSender,
     ratatui_tracing::{EventLog, EventReceiver},
     ui::{widgets::Display, Action, Component, Config},
     PngBuilder, Update,
@@ -14,14 +17,14 @@ pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     updates: watch::Receiver<Vec<Update>>,
-    png_sender: watch::Sender<Bytes>,
+    png_sender: PngSender,
     log: EventLog,
 }
 
 impl Home {
     pub fn new(
         updates: watch::Receiver<Vec<Update>>,
-        png_sender: watch::Sender<Bytes>,
+        png_sender: PngSender,
         event_receiver: EventReceiver,
     ) -> Self {
         let log = EventLog::new(event_receiver, 50);
@@ -84,7 +87,7 @@ impl Component for Home {
         let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display);
 
         if let Some(png) = draw_display(display, frame, &updates) {
-            self.png_sender.send_replace(png);
+            self.png_sender.send_replace((png, SystemTime::now()));
         };
 
         frame.render_widget(&self.log, debug);

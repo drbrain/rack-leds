@@ -13,7 +13,6 @@ mod update;
 use std::sync::{atomic::AtomicBool, Arc};
 
 pub use args::Args;
-use bytes::Bytes;
 use collector::Collector;
 use eyre::Result;
 pub use http::Http;
@@ -21,14 +20,13 @@ pub use layout::Layout;
 pub use png_builder::PngBuilder;
 use ratatui_tracing::EventReceiver;
 pub use ratatui_tracing::RatatuiTracing;
-use tokio::sync::{mpsc, watch};
-use tokio::task::JoinSet;
 use tokio::{
     signal::{
         ctrl_c,
         unix::{signal, SignalKind},
     },
-    task::LocalSet,
+    sync::mpsc,
+    task::{JoinSet, LocalSet},
 };
 use tracing::{info, instrument};
 use ui::{Action, App};
@@ -57,8 +55,8 @@ async fn tokio_main(
         .name("collector outer")
         .spawn(async move { collector.wait().await })?;
 
-    let (png_sender, png_receiver) = watch::channel(Bytes::new());
-    let http = Http::new(args.server_address, png_receiver)?;
+    let (png_sender, png_receiver) = png_builder::update_channel();
+    let http = Http::new(args.server_address, png_receiver, args.period())?;
     tasks.build_task().name("http server").spawn(http.run())?;
 
     if !args.headless {
