@@ -1,0 +1,3 @@
+adafruit-ampy
+rshell
+micropython-rp2-stubs==1.22.1.post2
