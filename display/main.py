@@ -3,11 +3,14 @@ from network_manager import NetworkManager
 from picographics import PicoGraphics, DISPLAY_GALACTIC_UNICORN as DISPLAY
 from pngdec import PNG
 from time import sleep
+from strptime import strptime
 import CONFIG
 import asyncio
 import uurequests
 
 CURRENT_PNG = "current.png"
+HTTP_DATE = "%a, %d %b %Y %H:%M:%S GMT"
+STARTUP_DELAY = 2
 
 # overclock to 200Mhz
 machine.freq(200000000)
@@ -32,6 +35,44 @@ def draw_text(text, line):
 
     graphics.text(text, 0, y, -1, 1, 0)
 
+def is_leap(year):
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+MONTH_DAYS = (
+    0,
+    31,
+    28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31
+)
+
+def days_for(year, month, day):
+    _year = year - 1
+    year_days = _year * 365 + _year // 4 - _year // 100 + _year // 400
+
+    month_days = MONTH_DAYS[month] + (month > 2 and is_leap(year))
+
+    return year_days + month_days + day
+
+EPOCH_DATE = days_for(1970, 1, 1)
+
+def epoch_seconds(time):
+    days = days_for(time.tm_year, time.tm_mon, 1) - EPOCH_DATE + time.tm_yday - 2
+
+    hours = 24 * days + time.tm_hour
+
+    minutes = 60 * hours + time.tm_min
+
+    return 60 * minutes + time.tm_sec
+
 brightness = 0.5
 galactic.set_brightness(brightness)
 clear_display()
@@ -40,7 +81,7 @@ graphics.set_font("bitmap6")
 draw_text("starting", 0)
 galactic.update(graphics)
 
-sleep(2)
+sleep(STARTUP_DELAY)
 
 def status_handler(mode, status, ip):
     clear_display()
@@ -62,21 +103,30 @@ def status_handler(mode, status, ip):
 network_manager = NetworkManager(CONFIG.COUNTRY, status_handler=status_handler)
 asyncio.get_event_loop().run_until_complete(network_manager.client(CONFIG.SSID, CONFIG.PSK))
 
-sleep(3)
+sleep(STARTUP_DELAY)
 
 clear_display()
 draw_text("server", 0)
 draw_text("{}".format(CONFIG.SERVER_ADDR), 1)
 galactic.update(graphics)
 
-sleep(3)
+sleep(STARTUP_DELAY)
 
 url = "http://{}/current.png".format(CONFIG.SERVER_ADDR)
 
 while True:
     print("fetching {}".format(url))
     response = uurequests.get(url, parse_headers = True)
-    print("fetched")
+
+    date = response.headers["date"]
+    date = epoch_seconds(strptime(date, HTTP_DATE))
+
+    expires = response.headers["expires"]
+    expires = epoch_seconds(strptime(expires, HTTP_DATE))
+
+    next_update = expires - date
+
+    print("fetched, next update: {}".format(next_update))
 
     clear_display()
 
@@ -86,4 +136,4 @@ while True:
 
     galactic.update(graphics)
 
-    sleep(15)
+    sleep(next_update)
