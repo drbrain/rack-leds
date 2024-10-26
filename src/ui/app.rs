@@ -4,10 +4,11 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, watch};
+use tokio::sync::mpsc;
 use tracing::{debug, instrument};
 
 use crate::{
+    collector::UpdateReceiver,
     png_builder::PngSender,
     ratatui_tracing::EventReceiver,
     ui::{
@@ -16,7 +17,6 @@ use crate::{
         config::Config,
         tui::{Event, Tui},
     },
-    Update,
 };
 
 pub struct App {
@@ -45,7 +45,7 @@ impl App {
         event_receiver: EventReceiver,
         tick_rate: f64,
         frame_rate: f64,
-        updates: watch::Receiver<Vec<Update>>,
+        updates: UpdateReceiver,
         png_sender: PngSender,
     ) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();

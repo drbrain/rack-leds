@@ -1,18 +1,23 @@
+use crate::{
+    collector::{Update, UpdateReceiver},
+    device::Device,
+};
 use eyre::{Context, OptionExt, Result};
 use itertools::Itertools;
 use prometheus_http_query::{response::PromqlResult, Client};
-use std::{fmt::Display, time::Duration};
+use std::{
+    fmt::Display,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use tokio::{sync::watch, task::JoinHandle, time};
 use tracing::{debug, instrument, trace};
-
-use crate::{collector::Update, device::Device};
 
 pub struct Prometheus {
     client: Client,
     timeout: i64,
     period: Duration,
     devices: Vec<Device>,
-    update: watch::Sender<Vec<Update>>,
+    update: watch::Sender<(Vec<Update>, SystemTime)>,
 }
 
 impl Prometheus {
@@ -31,7 +36,7 @@ impl Prometheus {
             .try_into()
             .wrap_err_with(|| format!("timeout {timeout:?} is too long"))?;
 
-        let (update, _) = watch::channel(vec![]);
+        let (update, _) = watch::channel((vec![], UNIX_EPOCH));
 
         Ok(Self {
             client,
@@ -42,7 +47,7 @@ impl Prometheus {
         })
     }
 
-    pub fn collect(self) -> (watch::Receiver<Vec<Update>>, JoinHandle<Result<()>>) {
+    pub fn collect(self) -> (UpdateReceiver, JoinHandle<Result<()>>) {
         let update = self.update.subscribe();
 
         let collector = tokio::task::Builder::new()
@@ -72,7 +77,7 @@ impl Prometheus {
                 updates.push(update);
             }
 
-            self.update.send_replace(updates);
+            self.update.send_replace((updates, SystemTime::now()));
         }
     }
 

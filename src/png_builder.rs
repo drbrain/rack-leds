@@ -1,6 +1,6 @@
 use std::{
     sync::{Arc, Mutex},
-    time::SystemTime,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use bytes::{Bytes, BytesMut};
@@ -9,7 +9,7 @@ use ratatui::{layout::Rect, style::Color, Frame};
 use tokio::sync::watch;
 
 pub fn update_channel() -> (PngSender, PngReceiver) {
-    watch::channel((Bytes::new(), SystemTime::now()))
+    watch::channel((Bytes::new(), UNIX_EPOCH))
 }
 
 pub type PngReceiver = watch::Receiver<(Bytes, SystemTime)>;

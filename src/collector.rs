@@ -2,6 +2,8 @@ mod absolute;
 mod diff;
 mod prometheus;
 
+use std::time::SystemTime;
+
 pub use absolute::Absolute;
 pub use diff::Diff;
 use eyre::{Context, Result};
@@ -10,9 +12,11 @@ use tokio::{sync::watch, task::JoinHandle};
 
 use crate::{Args, Update};
 
+pub type UpdateReceiver = watch::Receiver<(Vec<Update>, SystemTime)>;
+
 pub struct Collector {
     collector: JoinHandle<Result<()>>,
-    update: watch::Receiver<Vec<Update>>,
+    update: UpdateReceiver,
 }
 
 impl Collector {
@@ -26,7 +30,7 @@ impl Collector {
         Ok(Self { collector, update })
     }
 
-    pub fn subscribe(&self) -> watch::Receiver<Vec<Update>> {
+    pub fn subscribe(&self) -> UpdateReceiver {
         self.update.clone()
     }
 
