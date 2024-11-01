@@ -1794,6 +1794,7 @@ dependencies = [
  "png",
  "pretty_assertions",
  "prometheus-http-query",
+ "rand",
  "ratatui",
  "serde",
  "serde_json",
