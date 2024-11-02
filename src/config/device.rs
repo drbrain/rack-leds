@@ -54,6 +54,7 @@ impl From<&Device> for crate::device::Device {
                 };
 
                 crate::device::Device::Switch(Switch::new(
+                    address,
                     &labels,
                     &receive_query,
                     &transmit_query,

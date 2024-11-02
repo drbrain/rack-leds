@@ -7,6 +7,7 @@ use crate::{
 };
 
 pub struct Switch {
+    address: String,
     labels: String,
     receive: Diff,
     receive_query: String,
@@ -17,8 +18,15 @@ pub struct Switch {
 }
 
 impl Switch {
-    pub fn new(labels: &str, receive_query: &str, transmit_query: &str, poe_query: &str) -> Self {
+    pub fn new(
+        address: &str,
+        labels: &str,
+        receive_query: &str,
+        transmit_query: &str,
+        poe_query: &str,
+    ) -> Self {
         Self {
+            address: address.to_string(),
             labels: labels.to_string(),
             receive: Default::default(),
             receive_query: receive_query.into(),
