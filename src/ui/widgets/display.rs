@@ -48,6 +48,7 @@ impl<'a> Widget for Display<'a> {
                 Update::Switch {
                     device: switch,
                     layout,
+                    ..
                 } => self.paint_switch(switch, *layout, context).unwrap(),
             });
 

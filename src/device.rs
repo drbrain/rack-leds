@@ -25,10 +25,15 @@ impl Device {
 
     pub async fn update(&self, connection: &prometheus::Connection) -> Result<Update> {
         let update = match self {
-            Device::Switch { device: switch, .. } => {
+            Device::Switch { id, device: switch } => {
                 let device = switch.update(connection).await?;
                 let layout = switch.layout(connection).await?;
-                Update::Switch { layout, device }
+
+                Update::Switch {
+                    id: *id,
+                    layout,
+                    device,
+                }
             }
         };
 

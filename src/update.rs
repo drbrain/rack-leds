@@ -2,11 +2,15 @@ mod switch;
 
 pub use switch::Switch;
 
-use crate::Layout;
+use crate::{device::Id, Layout};
 
 #[derive(Clone, Debug)]
 pub enum Update {
-    Switch { device: Switch, layout: Layout },
+    Switch {
+        id: Id,
+        device: Switch,
+        layout: Layout,
+    },
 }
 
 impl Update {
