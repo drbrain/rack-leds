@@ -10,7 +10,7 @@ pub use switch::Switch;
 
 use crate::{collector::prometheus, Update};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Device {
     Switch { id: Id, device: Switch },
 }
@@ -20,6 +20,12 @@ impl Device {
         Device::Switch {
             id: next_id(),
             device: switch,
+        }
+    }
+
+    pub fn id(&self) -> Id {
+        match self {
+            Device::Switch { id, .. } => *id,
         }
     }
 

@@ -18,7 +18,7 @@ use tracing::{debug, error, info, instrument, trace};
 
 use crate::{
     device::{Device, Id},
-    Args, Update,
+    Args, Devices, Update,
 };
 
 pub type UpdateReceiver = watch::Receiver<(HashMap<Id, Update>, SystemTime)>;
@@ -32,11 +32,12 @@ pub struct Collector {
 }
 
 impl Collector {
-    pub fn new(args: &Args) -> Result<Self> {
+    pub fn new(args: &Args, devices: &Devices) -> Result<Self> {
         let (update_sender, _) = watch::channel((HashMap::default(), UNIX_EPOCH));
 
-        let devices: Vec<Device> = args.config()?.into();
-        let devices = devices.into_iter().map(|device| device.into()).collect();
+        let mut devices: Vec<Arc<Device>> = devices.devices().values().cloned().collect();
+
+        devices.sort_by_cached_key(|device| device.id());
 
         debug!("devices: {:#?}", devices);
 

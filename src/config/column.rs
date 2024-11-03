@@ -6,3 +6,13 @@ use crate::config::Device;
 pub struct Column {
     devices: Vec<Device>,
 }
+
+impl Column {
+    pub fn devices(&self) -> &[Device] {
+        &self.devices
+    }
+
+    pub fn len(&self) -> usize {
+        self.devices.len()
+    }
+}

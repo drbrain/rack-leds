@@ -1,8 +1,11 @@
-use std::{cmp::Ordering, sync::RwLock};
+use std::{
+    cmp::Ordering,
+    sync::{Arc, RwLock},
+};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Diff {
-    inner: RwLock<Inner>,
+    inner: Arc<RwLock<Inner>>,
 }
 
 impl Diff {

@@ -2,6 +2,7 @@ mod args;
 mod collector;
 mod config;
 mod device;
+mod devices;
 mod http;
 mod init;
 mod layout;
@@ -14,6 +15,7 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 pub use args::Args;
 use collector::Collector;
+pub use devices::Devices;
 use eyre::Result;
 pub use http::Http;
 pub use layout::Layout;
@@ -48,9 +50,11 @@ async fn tokio_main(
 ) -> Result<()> {
     debug!("args: {:#?}", args);
 
+    let devices: Devices = args.config()?.into();
+
     let mut tasks = JoinSet::new();
 
-    let collector = Collector::new(&args)?;
+    let collector = Collector::new(&args, &devices)?;
     let updates = collector.subscribe();
 
     collector.run_on(&mut tasks)?;

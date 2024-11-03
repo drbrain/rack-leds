@@ -6,6 +6,7 @@ use crate::{
     update, Layout,
 };
 
+#[derive(Clone)]
 pub struct Switch {
     address: String,
     labels: String,

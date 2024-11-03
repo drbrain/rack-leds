@@ -1,8 +1,8 @@
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Absolute {
-    inner: RwLock<Vec<u64>>,
+    inner: Arc<RwLock<Vec<u64>>>,
 }
 
 impl Absolute {
@@ -22,7 +22,7 @@ impl Absolute {
 impl From<Vec<u64>> for Absolute {
     fn from(values: Vec<u64>) -> Self {
         Self {
-            inner: values.into(),
+            inner: Arc::new(values.into()),
         }
     }
 }
