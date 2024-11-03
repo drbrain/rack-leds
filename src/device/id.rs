@@ -5,7 +5,7 @@ use std::{
 
 static ID: OnceLock<Mutex<u64>> = OnceLock::new();
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Id(u64);
 
 impl Display for Id {

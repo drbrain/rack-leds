@@ -3,6 +3,7 @@ mod diff;
 pub mod prometheus;
 
 use std::{
+    collections::HashMap,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -15,10 +16,13 @@ pub use prometheus::Prometheus;
 use tokio::{sync::watch, task::JoinSet, time};
 use tracing::{debug, error, info, instrument, trace};
 
-use crate::{device::Device, Args, Update};
+use crate::{
+    device::{Device, Id},
+    Args, Update,
+};
 
-pub type UpdateReceiver = watch::Receiver<(Vec<Update>, SystemTime)>;
-pub type UpdateSender = watch::Sender<(Vec<Update>, SystemTime)>;
+pub type UpdateReceiver = watch::Receiver<(HashMap<Id, Update>, SystemTime)>;
+pub type UpdateSender = watch::Sender<(HashMap<Id, Update>, SystemTime)>;
 
 pub struct Collector {
     devices: Vec<Arc<Device>>,
@@ -29,7 +33,7 @@ pub struct Collector {
 
 impl Collector {
     pub fn new(args: &Args) -> Result<Self> {
-        let (update_sender, _) = watch::channel((vec![], UNIX_EPOCH));
+        let (update_sender, _) = watch::channel((HashMap::default(), UNIX_EPOCH));
 
         let devices: Vec<Device> = args.config()?.into();
         let devices = devices.into_iter().map(|device| device.into()).collect();
@@ -71,11 +75,13 @@ impl Collector {
                     .spawn(async move { update(pool, device).await })?;
             }
 
-            let mut updates = Vec::with_capacity(self.devices.len());
+            let mut updates = HashMap::with_capacity(self.devices.len());
 
             while let Some(result) = update_tasks.join_next().await {
                 match result? {
-                    Ok(update) => updates.push(update),
+                    Ok(update) => {
+                        updates.insert(update.id(), update);
+                    }
                     Err(e) => error!(?e, "device update error"),
                 }
             }

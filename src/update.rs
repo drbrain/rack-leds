@@ -18,6 +18,12 @@ impl Update {
         self.layout().height()
     }
 
+    pub fn id(&self) -> Id {
+        match self {
+            Update::Switch { id, .. } => *id,
+        }
+    }
+
     fn layout(&self) -> Layout {
         match self {
             Update::Switch { layout, .. } => *layout,

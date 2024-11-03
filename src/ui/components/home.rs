@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bytes::Bytes;
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
@@ -6,6 +8,7 @@ use tracing::error;
 
 use crate::{
     collector::UpdateReceiver,
+    device::Id,
     png_builder::PngSender,
     ratatui_tracing::{EventLog, EventReceiver},
     ui::{widgets::Display, Action, Component, Config},
@@ -85,7 +88,7 @@ impl Component for Home {
 
         let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display);
 
-        if let Some(png) = draw_display(display, frame, &updates) {
+        if let Some(png) = draw_display(display, frame, updates) {
             self.png_sender.send_replace((png, updated_at));
         };
 
@@ -95,18 +98,22 @@ impl Component for Home {
     }
 }
 
-fn draw_display(display_outer: Rect, frame: &mut Frame<'_>, updates: &[Update]) -> Option<Bytes> {
+fn draw_display(
+    display_outer: Rect,
+    frame: &mut Frame<'_>,
+    updates: HashMap<Id, Update>,
+) -> Option<Bytes> {
     let display = Block::new().title("Display").borders(Borders::ALL);
     let display_inner = display.inner(display_outer);
     frame.render_widget(display, display_outer);
 
-    let heights: Vec<_> = updates.iter().map(|update| update.height()).collect();
+    let heights: Vec<_> = updates.values().map(|update| update.height()).collect();
 
     let layout = Layout::vertical(heights).split(display_inner);
 
     layout
         .iter()
-        .zip(updates.iter())
+        .zip(updates.values())
         .for_each(|(area, update)| {
             let [area] = Layout::horizontal([update.width()]).split(*area)[..] else {
                 unreachable!("Constraints removed from layout");
