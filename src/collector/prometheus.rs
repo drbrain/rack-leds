@@ -1,84 +1,27 @@
-use crate::{
-    collector::{Update, UpdateReceiver},
-    device::Device,
-};
+mod manager;
+
+use deadpool::managed::Object;
 use eyre::{Context, OptionExt, Result};
 use itertools::Itertools;
+pub use manager::Manager;
 use prometheus_http_query::{response::PromqlResult, Client};
-use std::{
-    fmt::Display,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
-use tokio::{sync::watch, task::JoinHandle, time};
+use std::fmt::Display;
 use tracing::{debug, instrument, trace};
+
+pub type Connection = Object<Manager>;
 
 pub struct Prometheus {
     client: Client,
     timeout: i64,
-    period: Duration,
-    devices: Vec<Device>,
-    update: watch::Sender<(Vec<Update>, SystemTime)>,
 }
 
 impl Prometheus {
-    pub fn new(
-        prometheus_url: &str,
-        period: Duration,
-        timeout: Duration,
-        devices: Vec<Device>,
-    ) -> Result<Self> {
-        debug!(url = %prometheus_url, ?period, ?timeout, "creating client");
+    pub fn new(url: &str, timeout: i64) -> Result<Self> {
+        debug!(url = %url, ?timeout, "creating client");
         let client =
-            Client::try_from(prometheus_url).wrap_err("unable to create prometheus client")?;
+            Client::try_from(url).wrap_err(format!("Unable to create client for {url}"))?;
 
-        let timeout = timeout
-            .as_millis()
-            .try_into()
-            .wrap_err_with(|| format!("timeout {timeout:?} is too long"))?;
-
-        let (update, _) = watch::channel((vec![], UNIX_EPOCH));
-
-        Ok(Self {
-            client,
-            timeout,
-            period,
-            devices,
-            update,
-        })
-    }
-
-    pub fn collect(self) -> (UpdateReceiver, JoinHandle<Result<()>>) {
-        let update = self.update.subscribe();
-
-        let collector = tokio::task::Builder::new()
-            .name("collector inner")
-            .spawn(self.collector())
-            .expect("Failed to spawn collector");
-
-        (update, collector)
-    }
-
-    #[instrument(skip_all, fields(target = %self.client.base_url().to_string()))]
-    async fn collector(self) -> Result<()> {
-        let mut interval = time::interval(self.period);
-        interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
-
-        debug!(period = ?interval.period(), "started");
-
-        loop {
-            interval.tick().await;
-
-            debug!("updating devices");
-
-            let mut updates = Vec::with_capacity(self.devices.len());
-
-            for device in self.devices.iter() {
-                let update = device.update(&self).await?;
-                updates.push(update);
-            }
-
-            self.update.send_replace((updates, SystemTime::now()));
-        }
+        Ok(Self { client, timeout })
     }
 
     #[instrument(skip_all, fields(%query, %label))]

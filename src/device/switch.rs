@@ -2,7 +2,7 @@ use eyre::Result;
 use tracing::instrument;
 
 use crate::{
-    collector::{Absolute, Diff, Prometheus},
+    collector::{prometheus, Absolute, Diff},
     update, Layout,
 };
 
@@ -37,22 +37,26 @@ impl Switch {
         }
     }
 
+    pub fn address(&self) -> String {
+        self.address.clone()
+    }
+
     #[instrument(skip_all, fields(labels = ?self.labels))]
-    pub async fn layout(&self, client: &Prometheus) -> Result<Layout> {
-        Layout::new(client, &self.labels).await
+    pub async fn layout(&self, connection: &prometheus::Connection) -> Result<Layout> {
+        Layout::new(connection, &self.labels).await
     }
 
     #[instrument(level="debug", skip_all, ret, fields(labels = ?self.labels))]
-    pub async fn update(&self, client: &Prometheus) -> Result<update::Switch> {
+    pub async fn update(&self, connection: &prometheus::Connection) -> Result<update::Switch> {
         self.receive
-            .update(client.get_values(&self.receive_query).await?);
+            .update(connection.get_values(&self.receive_query).await?);
         let receive_difference = self.receive.difference();
 
         self.transmit
-            .update(client.get_values(&self.transmit_query).await?);
+            .update(connection.get_values(&self.transmit_query).await?);
         let transmit_difference = self.transmit.difference();
 
-        self.update_poe(client).await?;
+        self.update_poe(connection).await?;
 
         Ok(update::Switch::new(
             receive_difference,
@@ -61,10 +65,10 @@ impl Switch {
         ))
     }
 
-    async fn update_poe(&self, client: &Prometheus) -> Result<()> {
+    async fn update_poe(&self, connection: &prometheus::Connection) -> Result<()> {
         let mut poe = vec![0; self.receive.len()];
 
-        client
+        connection
             .get_values_with_label(&self.poe_query, "port_num")
             .await?
             .iter()

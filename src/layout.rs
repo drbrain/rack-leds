@@ -1,7 +1,7 @@
 use eyre::{OptionExt, Result};
 use std::fmt::Display;
 
-use crate::collector::Prometheus;
+use crate::collector::prometheus;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Layout {
@@ -13,9 +13,9 @@ pub enum Layout {
 }
 
 impl Layout {
-    pub async fn new(prometheus: &Prometheus, labels: impl Display) -> Result<Self> {
+    pub async fn new(connection: &prometheus::Connection, labels: impl Display) -> Result<Self> {
         let query = format!("sysDescr{{{labels}}}");
-        let description = prometheus.get_label(query, "sysDescr").await?;
+        let description = connection.get_label(query, "sysDescr").await?;
 
         if description.starts_with("USW-8-150W,") {
             return Ok(Self::SwitchEightPlusTwo);
@@ -26,7 +26,7 @@ impl Layout {
         }
 
         let query = format!("count(ifHCInOctets{{{labels}, ifAlias=~\"(Port|SFP) .*\"}})");
-        let result = prometheus.get_values(query).await?;
+        let result = connection.get_values(query).await?;
 
         let interfaces = result.first().ok_or_eyre("No interfaces found")?;
 

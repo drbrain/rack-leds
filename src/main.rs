@@ -50,10 +50,8 @@ async fn tokio_main(
 
     let collector = Collector::new(&args)?;
     let updates = collector.subscribe();
-    tasks
-        .build_task()
-        .name("collector outer")
-        .spawn(async move { collector.wait().await })?;
+
+    collector.run_on(&mut tasks)?;
 
     let (png_sender, png_receiver) = png_builder::update_channel();
     let http = Http::new(args.server_address, png_receiver, args.period())?;
