@@ -95,3 +95,12 @@ impl Prometheus {
         Ok(self.client.query(query).timeout(self.timeout).get().await?)
     }
 }
+
+impl std::fmt::Debug for Prometheus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Prometheus")
+            .field("url", &self.client.base_url())
+            .field("timeout", &self.timeout)
+            .finish()
+    }
+}

@@ -93,7 +93,7 @@ fn log_layer() -> (
 ) {
     let filter = log_filter();
 
-    let gui_active = Arc::new(AtomicBool::new(true));
+    let gui_active = Arc::new(AtomicBool::new(false));
 
     let stdout = stdout_layer(&gui_active);
 

@@ -28,7 +28,7 @@ use tokio::{
     sync::mpsc,
     task::{JoinSet, LocalSet},
 };
-use tracing::{info, instrument};
+use tracing::{debug, info, instrument};
 use ui::{Action, App};
 pub use update::Update;
 
@@ -46,6 +46,8 @@ async fn tokio_main(
     gui_active: Arc<AtomicBool>,
     event_receiver: EventReceiver,
 ) -> Result<()> {
+    debug!("args: {:#?}", args);
+
     let mut tasks = JoinSet::new();
 
     let collector = Collector::new(&args)?;
@@ -106,8 +108,12 @@ fn wait_for_sigint(
 
             if let Some(ref sender) = sender {
                 sender.send(Action::Quit).ok();
+            } else {
+                break;
             };
         }
+
+        Ok(())
     })?;
 
     Ok(())
@@ -126,8 +132,12 @@ fn wait_for_sigterm(
 
             if let Some(ref sender) = sender {
                 sender.send(Action::Quit).ok();
+            } else {
+                break;
             };
         }
+
+        Ok(())
     })?;
 
     Ok(())

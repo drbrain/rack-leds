@@ -85,3 +85,12 @@ impl Switch {
         Ok(())
     }
 }
+
+impl std::fmt::Debug for Switch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Switch")
+            .field("address", &self.address)
+            .field("labels", &self.labels)
+            .finish()
+    }
+}

@@ -5,6 +5,7 @@ use crate::Args;
 
 use crate::collector::Prometheus;
 
+#[derive(Debug)]
 pub struct Manager {
     timeout: i64,
     url: String,

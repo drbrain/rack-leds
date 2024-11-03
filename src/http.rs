@@ -10,7 +10,7 @@ use hyper::{
 };
 use hyper_util::rt::TokioIo;
 use tokio::net::{TcpListener, TcpStream};
-use tracing::instrument;
+use tracing::{debug, info, instrument};
 
 use crate::png_builder::PngReceiver;
 
@@ -25,10 +25,13 @@ impl Http {
         Ok(Self { addr, png, period })
     }
 
+    #[instrument(name = "http", skip_all, fields(addr = ?self.addr))]
     pub async fn run(self) -> Result<()> {
         let Self { addr, png, period } = self;
 
         let listener = TcpListener::bind(addr).await?;
+
+        info!("listening");
         let mut task_id = 0usize;
 
         let service = PngService::new(png, period);
@@ -43,7 +46,7 @@ impl Http {
 
             tokio::task::Builder::new()
                 .name(&task_name)
-                .spawn(handle_client(task_id, io, service))?;
+                .spawn(http_client(task_id, io, service))?;
 
             task_id += 1;
         }
@@ -51,7 +54,7 @@ impl Http {
 }
 
 #[instrument(level = "DEBUG", skip_all, ret, fields(id = _id))]
-async fn handle_client(_id: usize, io: TokioIo<TcpStream>, service: PngService) -> Result<()> {
+async fn http_client(_id: usize, io: TokioIo<TcpStream>, service: PngService) -> Result<()> {
     http1::Builder::new()
         .auto_date_header(true)
         .serve_connection(io, service)
@@ -81,6 +84,8 @@ impl Service<Request<Incoming>> for PngService {
         Pin<Box<dyn Future<Output = std::result::Result<Self::Response, Self::Error>> + Send>>;
 
     fn call(&self, req: Request<Incoming>) -> Self::Future {
+        debug!(method = ?req.method(), uri = ?req.uri());
+
         let (&Method::GET | &Method::HEAD) = req.method() else {
             return Box::pin(async { Ok(Response::builder()
                 .status(StatusCode::METHOD_NOT_ALLOWED)

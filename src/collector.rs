@@ -13,7 +13,7 @@ pub use diff::Diff;
 use eyre::{eyre, Context, Result};
 pub use prometheus::Prometheus;
 use tokio::{sync::watch, task::JoinSet, time};
-use tracing::debug;
+use tracing::{debug, error, info, instrument, trace};
 
 use crate::{device::Device, Args, Update};
 
@@ -34,7 +34,7 @@ impl Collector {
         let devices: Vec<Device> = args.config()?.into();
         let devices = devices.into_iter().map(|device| device.into()).collect();
 
-        //let prometheus = Prometheus::new(&args.source, args.period(), args.timeout(), devices)?;
+        debug!("devices: {:#?}", devices);
 
         let pool = Pool::builder(prometheus::Manager::new(args)?)
             .build()
@@ -52,12 +52,12 @@ impl Collector {
         let mut interval = time::interval(self.period);
         interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
 
-        debug!(period = ?interval.period(), "started");
+        info!(period = ?interval.period(), "started");
 
         loop {
             interval.tick().await;
 
-            debug!("updating devices");
+            debug!(count = self.devices.len(), "updating devices");
 
             let mut update_tasks = JoinSet::new();
 
@@ -68,21 +68,16 @@ impl Collector {
                 update_tasks
                     .build_task()
                     .name(&format!("update {}", device))
-                    .spawn(async move {
-                        match pool.get().await {
-                            Ok(conn) => device.update(&conn).await,
-                            Err(e) => Err(eyre!(e)).wrap_err(format!(
-                                "retrieving connection for {}",
-                                pool.manager().url()
-                            )),
-                        }
-                    })?;
+                    .spawn(async move { update(pool, device).await })?;
             }
 
             let mut updates = Vec::with_capacity(self.devices.len());
 
             while let Some(result) = update_tasks.join_next().await {
-                updates.push(result??);
+                match result? {
+                    Ok(update) => updates.push(update),
+                    Err(e) => error!(?e, "device update error"),
+                }
             }
 
             self.update_sender
@@ -101,5 +96,18 @@ impl Collector {
 
     pub fn subscribe(&self) -> UpdateReceiver {
         self.update_sender.subscribe()
+    }
+}
+
+#[instrument(skip_all, err, fields(url = pool.manager().url(), ?device))]
+async fn update(pool: Pool<prometheus::Manager>, device: Arc<Device>) -> Result<Update> {
+    trace!("updating");
+
+    match pool.get().await {
+        Ok(conn) => device.update(&conn).await,
+        Err(e) => Err(eyre!(e)).wrap_err(format!(
+            "retrieving connection for {}",
+            pool.manager().url()
+        )),
     }
 }

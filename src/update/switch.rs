@@ -31,6 +31,14 @@ impl Switch {
         }
     }
 
+    pub fn zero(len: usize) -> Self {
+        Self {
+            receive: vec![0; len],
+            transmit: vec![0; len],
+            poe: vec![0; len],
+        }
+    }
+
     pub fn height(&self) -> u16 {
         if self.receive.len() > 8 {
             2

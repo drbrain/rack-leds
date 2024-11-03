@@ -1,3 +1,4 @@
+mod column;
 mod device;
 
 use serde::{Deserialize, Serialize};

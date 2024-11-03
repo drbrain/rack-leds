@@ -53,7 +53,7 @@ impl From<&Device> for crate::device::Device {
                     format!("unpoller_device_port_poe_amperes{{{}}}", labels)
                 };
 
-                crate::device::Device::Switch(Switch::new(
+                crate::device::Device::switch(Switch::new(
                     address,
                     &labels,
                     &receive_query,

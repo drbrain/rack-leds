@@ -12,7 +12,7 @@ use crate::config::Config;
 const DEFAULT_HTTP_SERVER_ADDR: SocketAddr =
     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9753);
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// Display config
