@@ -1,30 +1,14 @@
+mod id;
 mod switch;
 
-use std::{
-    fmt::Display,
-    sync::{Mutex, OnceLock},
-};
+use std::fmt::Display;
 
 use eyre::Result;
+use id::next_id;
+pub use id::Id;
 pub use switch::Switch;
 
 use crate::{collector::prometheus, Update};
-
-static ID: OnceLock<Mutex<u64>> = OnceLock::new();
-
-type Id = u64;
-
-fn next_id() -> Id {
-    let id_mutex = ID.get_or_init(|| Mutex::new(0));
-
-    let mut guard = id_mutex.lock().unwrap();
-
-    let id = *guard;
-
-    *guard += 1;
-
-    id
-}
 
 #[derive(Debug)]
 pub enum Device {
