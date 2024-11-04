@@ -93,6 +93,27 @@ impl Service<Request<Incoming>> for PngService {
                 .body(Full::new(Bytes::new())).unwrap())});
         };
 
+        if req.uri().path() == "/" {
+            let refresh = self.period.as_secs();
+
+            let body = Bytes::from(format!(
+                "<!DOCTYPE html>
+<head>
+<title>Rack LEDS</title>
+<meta http-equiv=\"refresh\" content=\"{refresh}\">
+<body style=\"background: black\">
+<img style=\"width: 100%\" src=\"/current.png\">
+"
+            ));
+
+            return Box::pin(async move {
+                Ok(Response::builder()
+                    .status(StatusCode::NOT_FOUND)
+                    .body(Full::new(body))
+                    .unwrap())
+            });
+        }
+
         if req.uri().path() != "/current.png" {
             return Box::pin(async {
                 Ok(Response::builder()
