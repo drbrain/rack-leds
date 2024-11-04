@@ -10,6 +10,7 @@ mod init;
 mod layout;
 mod png_builder;
 mod ratatui_tracing;
+mod simulator;
 mod ui;
 mod update;
 
@@ -26,6 +27,7 @@ pub use layout::Layout;
 pub use png_builder::PngBuilder;
 use ratatui_tracing::EventReceiver;
 pub use ratatui_tracing::RatatuiTracing;
+pub use simulator::Simulator;
 use tokio::{
     signal::{
         ctrl_c,
@@ -58,10 +60,21 @@ async fn tokio_main(
 
     let mut tasks = JoinSet::new();
 
-    let collector = Collector::new(&args, &devices)?;
-    let updates = collector.subscribe();
+    let updates = if args.simulate {
+        let simulator = Simulator::new(&args, &devices)?;
+        let updates = simulator.subscribe();
 
-    collector.run_on(&mut tasks)?;
+        simulator.run_on(&mut tasks)?;
+
+        updates
+    } else {
+        let collector = Collector::new(&args, &devices)?;
+        let updates = collector.subscribe();
+
+        collector.run_on(&mut tasks)?;
+
+        updates
+    };
 
     let (png_sender, png_receiver) = png_builder::update_channel();
     let http = Http::new(args.server_address, png_receiver, args.period())?;

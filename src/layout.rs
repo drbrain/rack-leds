@@ -39,6 +39,16 @@ impl Layout {
         }
     }
 
+    pub fn simulate(ports: usize) -> Self {
+        match ports {
+            5 => Self::SwitchFive,
+            8 => Self::SwitchEight,
+            10 => Self::SwitchEightPlusTwo,
+            18 => Self::SwitchSixteenPlusTwo,
+            _ => Self::Unknown,
+        }
+    }
+
     pub fn coordinate(&self, index: usize) -> (f64, f64) {
         match self {
             Layout::SwitchFive | Layout::SwitchEight => (index as f64, 0.0),

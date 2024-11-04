@@ -31,6 +31,10 @@ pub struct Args {
     #[arg(short, long, value_name = "URL")]
     pub source: String,
 
+    /// Simulate updates (ignores --source)
+    #[arg(long)]
+    pub simulate: bool,
+
     /// Prometheus refresh period
     #[arg(long, value_name = "SECONDS", value_parser = secs)]
     period: Option<Duration>,

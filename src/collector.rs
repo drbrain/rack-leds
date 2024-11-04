@@ -53,6 +53,7 @@ impl Collector {
         })
     }
 
+    #[instrument(name = "collector", skip_all)]
     pub async fn run(self) -> Result<()> {
         let mut interval = time::interval(self.period);
         interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
@@ -95,7 +96,7 @@ impl Collector {
     pub fn run_on(self, join_set: &mut JoinSet<Result<()>>) -> Result<()> {
         join_set
             .build_task()
-            .name("collector outer")
+            .name("collector")
             .spawn(async move { self.run().await })?;
 
         Ok(())
