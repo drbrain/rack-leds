@@ -1,17 +1,20 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::device::{Device, Id};
+use crate::{
+    device::{Device, Id},
+    Columns,
+};
 
 pub struct Devices {
-    columns: Vec<Vec<Id>>,
+    columns: Columns,
     devices: HashMap<Id, Arc<Device>>,
 }
 impl Devices {
-    pub fn new(columns: Vec<Vec<Id>>, devices: HashMap<Id, Arc<Device>>) -> Self {
+    pub fn new(columns: Columns, devices: HashMap<Id, Arc<Device>>) -> Self {
         Self { columns, devices }
     }
 
-    pub fn columns(&self) -> &[Vec<Id>] {
+    pub fn columns(&self) -> &Columns {
         &self.columns
     }
 

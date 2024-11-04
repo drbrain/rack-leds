@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 pub use device::Device;
 
-use crate::Devices;
+use crate::{Columns, Devices};
 
 #[derive(Deserialize, Serialize)]
 pub struct Config {
@@ -32,12 +32,12 @@ impl From<Config> for Devices {
                     },
                 );
 
-                columns.push(column);
+                columns.push(crate::Column::new(column));
 
                 (columns, devices)
             },
         );
 
-        Self::new(columns, devices)
+        Self::new(Columns::new(columns), devices)
     }
 }

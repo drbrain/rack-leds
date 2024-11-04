@@ -17,6 +17,7 @@ use crate::{
         config::Config,
         tui::{Event, Tui},
     },
+    Columns,
 };
 
 pub struct App {
@@ -45,6 +46,7 @@ impl App {
         event_receiver: EventReceiver,
         tick_rate: f64,
         frame_rate: f64,
+        columns: Columns,
         updates: UpdateReceiver,
         png_sender: PngSender,
     ) -> Result<Self> {
@@ -55,7 +57,7 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Home::new(updates, png_sender, event_receiver)),
+                Box::new(Home::new(columns, updates, png_sender, event_receiver)),
                 Box::new(FpsCounter::default()),
             ],
             should_quit: false,

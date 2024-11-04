@@ -1,5 +1,7 @@
 mod args;
 mod collector;
+mod column;
+mod columns;
 mod config;
 mod device;
 mod devices;
@@ -15,6 +17,8 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 pub use args::Args;
 use collector::Collector;
+pub use column::Column;
+pub use columns::Columns;
 pub use devices::Devices;
 use eyre::Result;
 pub use http::Http;
@@ -70,6 +74,7 @@ async fn tokio_main(
             event_receiver,
             args.tick_rate,
             args.frame_rate,
+            devices.columns().clone(),
             updates,
             png_sender,
         )?;

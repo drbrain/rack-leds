@@ -12,10 +12,11 @@ use crate::{
     png_builder::PngSender,
     ratatui_tracing::{EventLog, EventReceiver},
     ui::{widgets::Display, Action, Component, Config},
-    PngBuilder, Update,
+    Columns, PngBuilder, Update,
 };
 
 pub struct Home {
+    columns: Columns,
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     updates: UpdateReceiver,
@@ -25,6 +26,7 @@ pub struct Home {
 
 impl Home {
     pub fn new(
+        columns: Columns,
         updates: UpdateReceiver,
         png_sender: PngSender,
         event_receiver: EventReceiver,
@@ -32,6 +34,7 @@ impl Home {
         let log = EventLog::new(event_receiver, 50);
 
         Self {
+            columns,
             command_tx: Default::default(),
             config: Default::default(),
             updates,
@@ -88,7 +91,7 @@ impl Component for Home {
 
         let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display);
 
-        if let Some(png) = draw_display(display, frame, updates) {
+        if let Some(png) = draw_display(display, frame, &self.columns, updates) {
             self.png_sender.send_replace((png, updated_at));
         };
 
@@ -101,25 +104,47 @@ impl Component for Home {
 fn draw_display(
     display_outer: Rect,
     frame: &mut Frame<'_>,
+    columns: &Columns,
     updates: HashMap<Id, Update>,
 ) -> Option<Bytes> {
     let display = Block::new().title("Display").borders(Borders::ALL);
     let display_inner = display.inner(display_outer);
     frame.render_widget(display, display_outer);
 
-    let heights: Vec<_> = updates.values().map(|update| update.height()).collect();
+    let widths: Vec<_> = columns
+        .columns()
+        .map(|column| {
+            column
+                .ids()
+                .filter_map(|id| updates.get(&id))
+                .map(|update| update.width())
+                .max()
+                .unwrap_or(0)
+        })
+        .collect();
 
-    let layout = Layout::vertical(heights).split(display_inner);
+    let column_rects = Layout::horizontal(Constraint::from_lengths(widths)).split(display_inner);
 
-    layout
+    column_rects
         .iter()
-        .zip(updates.values())
-        .for_each(|(area, update)| {
-            let [area] = Layout::horizontal([update.width()]).split(*area)[..] else {
-                unreachable!("Constraints removed from layout");
-            };
+        .zip(columns.columns())
+        .for_each(|(area, column)| {
+            let updates: Vec<_> = column.ids().filter_map(|id| updates.get(&id)).collect();
 
-            frame.render_widget(Display::new(update), area);
+            let heights: Vec<_> = updates.iter().map(|update| update.height()).collect();
+
+            let layout = Layout::vertical(heights).split(*area);
+
+            layout
+                .iter()
+                .zip(updates.iter())
+                .for_each(|(area, update)| {
+                    let [area] = Layout::horizontal([update.width()]).split(*area)[..] else {
+                    unreachable!("Constraints removed from layout");
+                };
+
+                    frame.render_widget(Display::new(update), area);
+                });
         });
 
     match PngBuilder::new(frame, &display_inner).build() {
