@@ -5,7 +5,7 @@ use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{debug, instrument};
+use tracing::{debug, error, instrument, warn};
 
 use crate::{
     collector::UpdateReceiver,
@@ -43,7 +43,7 @@ pub enum Mode {
 impl App {
     pub fn new(
         gui_active: Arc<AtomicBool>,
-        event_receiver: EventReceiver,
+        events: EventReceiver,
         tick_rate: f64,
         frame_rate: f64,
         columns: Columns,
@@ -52,12 +52,14 @@ impl App {
     ) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
 
+        render_on_update(events.resubscribe(), updates.clone(), action_tx.clone())?;
+
         Ok(Self {
             gui_active,
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Home::new(columns, updates, png_sender, event_receiver)),
+                Box::new(Home::new(columns, updates, png_sender, events)),
                 Box::new(FpsCounter::default()),
             ],
             should_quit: false,
@@ -200,6 +202,7 @@ impl App {
                 };
             }
         }
+
         Ok(())
     }
 
@@ -224,4 +227,41 @@ impl App {
 
         Ok(())
     }
+}
+
+fn render_on_update(
+    mut events: EventReceiver,
+    mut updates: UpdateReceiver,
+    action_tx: mpsc::UnboundedSender<Action>,
+) -> Result<()> {
+    tokio::task::Builder::new()
+        .name("render_on_update")
+        .spawn(async move {
+            loop {
+                tokio::select! {
+                    result = updates.changed() => {
+                        if let Err(error) = result {
+                            error!(?error, "updates sender dropped");
+                            break;
+                        }
+                    }
+                    result = events.recv() => {
+                        if let Err(error) = result {
+                            error!(?error, "tracing event sender dropped");
+                            break;
+                        }
+                    }
+                }
+
+                // drop all other events in the queue because we only need to re-render once
+                events = events.resubscribe();
+
+                let _ = action_tx.send(Action::Render).or_else(|e| -> Result<()> {
+                    error!(?e, "failed to trigger rendering");
+                    Ok(())
+                });
+            }
+        })?;
+
+    Ok(())
 }

@@ -52,7 +52,7 @@ pub struct Args {
     pub server_address: SocketAddr,
 
     /// Frame rate, i.e. number of frames per second
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 8.0)]
+    #[arg(short, long, value_name = "FLOAT", default_value_t = 1.0)]
     pub frame_rate: f64,
 
     /// Tick rate, i.e. number of ticks per second
