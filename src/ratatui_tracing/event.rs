@@ -1,6 +1,6 @@
 use crate::ratatui_tracing::{Scope, ToScopeVisitor};
 use ratatui::{
-    style::{Color, Modifier, Style, Stylize},
+    style::{Color, Modifier, Style},
     text::{Line, Span, ToLine},
 };
 use std::collections::HashMap;
@@ -77,33 +77,43 @@ impl Event {
     }
 }
 
+const ERROR_STYLE: Style = Style::new().fg(Color::Red);
+const WARN_STYLE: Style = Style::new().fg(Color::Yellow);
+const INFO_STYLE: Style = Style::new().fg(Color::White);
+const DEBUG_STYLE: Style = Style::new().fg(Color::Blue);
+const TRACE_STYLE: Style = Style::new().fg(Color::Cyan);
+
+const DIM: Style = Style::new().add_modifier(Modifier::DIM);
+const BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
+const ITALIC: Style = Style::new().add_modifier(Modifier::ITALIC);
+
 impl ToLine for Event {
     fn to_line(&self) -> Line<'_> {
         let mut line = Line::default();
 
         let level = match self.level {
-            Level::ERROR => Span::styled("ERROR", Style::default().fg(Color::Red)),
-            Level::WARN => Span::styled("WARN ", Style::default().fg(Color::Yellow)),
-            Level::INFO => Span::styled("INFO ", Style::default().fg(Color::White)),
-            Level::DEBUG => Span::styled("DEBUG", Style::default().fg(Color::Blue)),
-            Level::TRACE => Span::styled("TRACE", Style::default().fg(Color::Cyan)),
+            Level::ERROR => Span::styled("ERROR", ERROR_STYLE),
+            Level::WARN => Span::styled("WARN ", WARN_STYLE),
+            Level::INFO => Span::styled("INFO ", INFO_STYLE),
+            Level::DEBUG => Span::styled("DEBUG", DEBUG_STYLE),
+            Level::TRACE => Span::styled("TRACE", TRACE_STYLE),
         };
 
         line.push_span(level);
         line.push_span(Span::raw(" "));
 
         for (index, scope) in self.scopes.iter().enumerate() {
-            line.push_span(Span::styled(scope.name(), Style::default().bold()));
-            line.push_span(Span::styled("{", Style::default().bold()));
+            line.push_span(Span::styled(scope.name(), BOLD));
+            line.push_span(Span::styled("{", BOLD));
             for (index, (field, value)) in scope.fields().enumerate() {
-                line.push_span(Span::styled(*field, Style::default().italic()));
-                line.push_span(Span::styled("=", Style::default().dim()));
+                line.push_span(Span::styled(*field, ITALIC));
+                line.push_span(Span::styled("=", DIM));
                 line.push_span(Span::raw(value));
                 if index != scope.len() - 1 {
                     line.push_span(Span::raw(" "));
                 }
             }
-            line.push_span(Span::styled("}", Style::default().bold()));
+            line.push_span(Span::styled("}", BOLD));
             if index == self.scopes.len() - 1 {
                 line.push_span(Span::raw(" "));
             } else {
@@ -111,10 +121,7 @@ impl ToLine for Event {
             }
         }
 
-        line.push_span(Span::styled(
-            self.target.clone(),
-            Style::default().add_modifier(Modifier::ITALIC),
-        ));
+        line.push_span(Span::styled(self.target.clone(), DIM));
         line.push_span(Span::raw(" "));
 
         for (name, value) in self.fields.iter() {
