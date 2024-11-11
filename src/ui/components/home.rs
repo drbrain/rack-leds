@@ -78,6 +78,7 @@ impl Component for Home {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
+        let update_png = self.updates.has_changed().unwrap_or(false);
         let (updates, updated_at) = self.updates.borrow().clone();
 
         let [status, display, debug] = Layout::vertical([
@@ -91,7 +92,7 @@ impl Component for Home {
 
         let [display] = Layout::horizontal([Constraint::Length(55)]).areas(display);
 
-        if let Some(png) = draw_display(display, frame, &self.columns, updates) {
+        if let Some(png) = draw_display(display, frame, &self.columns, updates, update_png) {
             self.png_sender.send_replace((png, updated_at));
         };
 
@@ -106,6 +107,7 @@ fn draw_display(
     frame: &mut Frame<'_>,
     columns: &Columns,
     updates: HashMap<Id, Update>,
+    update_png: bool,
 ) -> Option<Bytes> {
     let display = Block::new().title("Display").borders(Borders::ALL);
     let display_inner = display.inner(display_outer);
@@ -147,11 +149,15 @@ fn draw_display(
                 });
         });
 
-    match PngBuilder::new(frame, &display_inner).build() {
-        Ok(png) => Some(png), // TODO: serve as HTTP
-        Err(e) => {
-            error!(?e, "error building PNG");
-            None
+    if update_png {
+        match PngBuilder::new(frame, &display_inner).build() {
+            Ok(png) => Some(png),
+            Err(e) => {
+                error!(?e, "error building PNG");
+                None
+            }
         }
+    } else {
+        None
     }
 }
