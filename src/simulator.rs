@@ -5,10 +5,7 @@ use std::{
 };
 
 use eyre::Result;
-use rand::{
-    distributions::Uniform, prelude::Distribution, rngs::SmallRng, seq::SliceRandom, Rng,
-    SeedableRng,
-};
+use rand::{distributions::Uniform, prelude::Distribution, rngs::SmallRng, SeedableRng};
 use tokio::{sync::watch, task::JoinSet, time};
 use tracing::{debug, info, instrument};
 
@@ -17,9 +14,6 @@ use crate::{
     device::{Device, Id},
     update, Args, Devices, Layout, Update,
 };
-
-const PORTS: [usize; 4] = [5, 8, 10, 18];
-const DISABLED_THRESHOLD: f64 = 0.1;
 
 static TRAFFIC_HIGH: u64 = 1000;
 
@@ -40,27 +34,10 @@ impl Simulator {
         let mut devices: Vec<_> = devices
             .devices()
             .values()
+            // TODO: dispatch in Device, not here
             .map(|device| match device.as_ref() {
-                Device::Switch { id, .. } => {
-                    let ports = PORTS.choose(&mut rng).unwrap();
-                    let mut weights = Vec::with_capacity(*ports);
-
-                    for _ in 0..*ports {
-                        if rng.gen::<f64>() < DISABLED_THRESHOLD {
-                            weights.push(Uniform::new_inclusive(0, 0));
-                        } else {
-                            let low = traffic.sample(&mut rng);
-                            let high = 1 + low + traffic.sample(&mut rng);
-                            weights.push(Uniform::new(low, high));
-                        }
-                    }
-
-                    Simulated::Switch {
-                        id: *id,
-                        ports: *ports,
-                        weights,
-                    }
-                }
+                Device::AccessPoint { id, device } => device.simulate(*id, &mut rng, &traffic),
+                Device::Switch { id, device } => device.simulate(*id, &mut rng, &traffic),
             })
             .collect();
 
@@ -123,7 +100,7 @@ impl Simulator {
 }
 
 #[derive(Clone)]
-enum Simulated {
+pub enum Simulated {
     Switch {
         id: Id,
         ports: usize,

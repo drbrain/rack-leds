@@ -1,11 +1,18 @@
+mod access_point;
 mod switch;
 
+pub use access_point::AccessPoint;
 pub use switch::Switch;
 
 use crate::{device::Id, Layout};
 
 #[derive(Clone, Debug)]
 pub enum Update {
+    AccessPoint {
+        id: Id,
+        device: AccessPoint,
+        layout: Layout,
+    },
     Switch {
         id: Id,
         device: Switch,
@@ -20,12 +27,14 @@ impl Update {
 
     pub fn id(&self) -> Id {
         match self {
+            Update::AccessPoint { id, .. } => *id,
             Update::Switch { id, .. } => *id,
         }
     }
 
     fn layout(&self) -> Layout {
         match self {
+            Update::AccessPoint { layout, .. } => *layout,
             Update::Switch { layout, .. } => *layout,
         }
     }

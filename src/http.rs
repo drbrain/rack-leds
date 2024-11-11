@@ -87,10 +87,13 @@ impl Service<Request<Incoming>> for PngService {
         debug!(method = ?req.method(), uri = ?req.uri());
 
         let (&Method::GET | &Method::HEAD) = req.method() else {
-            return Box::pin(async { Ok(Response::builder()
-                .status(StatusCode::METHOD_NOT_ALLOWED)
-                .header(ALLOW, "GET, HEAD")
-                .body(Full::new(Bytes::new())).unwrap())});
+            return Box::pin(async {
+                Ok(Response::builder()
+                    .status(StatusCode::METHOD_NOT_ALLOWED)
+                    .header(ALLOW, "GET, HEAD")
+                    .body(Full::new(Bytes::new()))
+                    .unwrap())
+            });
         };
 
         if req.uri().path() == "/" {

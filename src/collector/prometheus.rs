@@ -45,7 +45,7 @@ impl Prometheus {
     }
 
     #[instrument(skip_all, fields(%query))]
-    pub async fn get_values(&self, query: impl Display) -> Result<Vec<u64>> {
+    pub async fn get_values(&self, query: impl Display) -> Result<Vec<f64>> {
         let values: Vec<_> = self
             .query(query)
             .await?
@@ -60,7 +60,7 @@ impl Prometheus {
                     .parse()
                     .unwrap_or(0)
             })
-            .map(|v| v.sample().value() as u64)
+            .map(|v| v.sample().value())
             .collect();
 
         trace!(?values);

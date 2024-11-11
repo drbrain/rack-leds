@@ -9,7 +9,11 @@ use ratatui::{
     },
 };
 
-use crate::{ui::Gradient, update::Switch, Layout, Update};
+use crate::{
+    ui::Gradient,
+    update::{AccessPoint, Switch},
+    Layout, Update,
+};
 
 pub struct Display<'a> {
     update: &'a Update,
@@ -18,6 +22,30 @@ pub struct Display<'a> {
 impl<'a> Display<'a> {
     pub fn new(update: &'a Update) -> Self {
         Self { update }
+    }
+
+    fn paint_access_point(
+        &self,
+        access_point: &AccessPoint,
+        layout: Layout,
+        context: &mut Context<'_>,
+    ) -> Result<()> {
+        let recv_gradient = Gradient::blue(&access_point.receive())?;
+        let tmit_gradient = Gradient::green(&access_point.transmit())?;
+
+        let util_gradient = Gradient::percent_gyrr()?;
+        let stations_gradient = Gradient::white(&access_point.stations())?;
+
+        access_point.paint(
+            context,
+            layout,
+            &recv_gradient,
+            &tmit_gradient,
+            &util_gradient,
+            &stations_gradient,
+        );
+
+        Ok(())
     }
 
     fn paint_switch(&self, switch: &Switch, layout: Layout, context: &mut Context) -> Result<()> {
@@ -45,6 +73,9 @@ impl<'a> Widget for Display<'a> {
             .marker(Marker::Block)
             .background_color(Color::Black)
             .paint(|context| match self.update {
+                Update::AccessPoint { device, layout, .. } => {
+                    self.paint_access_point(device, *layout, context).unwrap();
+                }
                 Update::Switch {
                     device: switch,
                     layout,

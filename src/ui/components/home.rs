@@ -140,8 +140,8 @@ fn draw_display(
                 .zip(updates.iter())
                 .for_each(|(area, update)| {
                     let [area] = Layout::horizontal([update.width()]).split(*area)[..] else {
-                    unreachable!("Constraints removed from layout");
-                };
+                        unreachable!("Constraints removed from layout");
+                    };
 
                     frame.render_widget(Display::new(update), area);
                 });

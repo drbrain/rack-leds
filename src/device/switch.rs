@@ -1,20 +1,26 @@
 use eyre::Result;
+use rand::{distributions::Uniform, prelude::Distribution, rngs::SmallRng, seq::SliceRandom, Rng};
 use tracing::instrument;
 
 use crate::{
     collector::{prometheus, Absolute, Diff},
+    device::Id,
+    simulator::Simulated,
     update, Layout,
 };
+
+const PORTS: [usize; 4] = [5, 8, 10, 18];
+const DISABLED_THRESHOLD: f64 = 0.1;
 
 #[derive(Clone)]
 pub struct Switch {
     address: String,
     labels: String,
-    receive: Diff,
+    receive: Diff<Vec<u64>>,
     receive_query: String,
-    transmit: Diff,
+    transmit: Diff<Vec<u64>>,
     transmit_query: String,
-    poe: Absolute,
+    poe: Absolute<Vec<u64>>,
     poe_query: String,
 }
 
@@ -47,14 +53,48 @@ impl Switch {
         Layout::new(connection, &self.labels).await
     }
 
+    // TODO: Return simulation data, let Device::simulate set id
+    pub fn simulate(&self, id: Id, rng: &mut SmallRng, traffic: &Uniform<u64>) -> Simulated {
+        let ports = PORTS.choose(rng).unwrap();
+        let mut weights = Vec::with_capacity(*ports);
+
+        for _ in 0..*ports {
+            if rng.gen::<f64>() < DISABLED_THRESHOLD {
+                weights.push(Uniform::new_inclusive(0, 0));
+            } else {
+                let low = traffic.sample(rng);
+                let high = 1 + low + traffic.sample(rng);
+                weights.push(Uniform::new(low, high));
+            }
+        }
+
+        Simulated::Switch {
+            id,
+            ports: *ports,
+            weights,
+        }
+    }
+
     #[instrument(level="debug", skip_all, ret, fields(labels = ?self.labels))]
     pub async fn update(&self, connection: &prometheus::Connection) -> Result<update::Switch> {
-        self.receive
-            .update(connection.get_values(&self.receive_query).await?);
+        self.receive.update(
+            connection
+                .get_values(&self.receive_query)
+                .await?
+                .iter()
+                .map(|v| *v as u64)
+                .collect(),
+        );
         let receive_difference = self.receive.difference();
 
-        self.transmit
-            .update(connection.get_values(&self.transmit_query).await?);
+        self.transmit.update(
+            connection
+                .get_values(&self.transmit_query)
+                .await?
+                .iter()
+                .map(|v| *v as u64)
+                .collect(),
+        );
         let transmit_difference = self.transmit.difference();
 
         self.update_poe(connection).await?;

@@ -30,6 +30,31 @@ impl Gradient {
         Self::new(dark, light, values)
     }
 
+    /// Gradient covering values from 0-100 from green to yellow to red to dark red
+    pub fn percent_gyrr() -> Result<Self> {
+        let green = Color::from_hsla(120.0, 0.75, 0.4, 1.0);
+        let yellow = Color::from_hsla(60.0, 0.75, 0.4, 1.0);
+        let red = Color::from_hsla(0.0, 0.75, 0.5, 1.0);
+        let dark_red = Color::from_hsla(0.0, 1.0, 0.5, 1.0);
+
+        let domain = vec![0.0, 100.0];
+        let inner = GradientBuilder::new()
+            .colors(&[green.clone(), yellow.clone(), red.clone(), dark_red.clone()])
+            .domain(&domain)
+            .mode(BlendMode::Rgb)
+            .build::<LinearGradient>()
+            .wrap_err("Unable to create percent GYRR gradient")?;
+
+        Ok(Self { inner })
+    }
+
+    pub fn white(values: &[u64]) -> Result<Self> {
+        let dark = Color::from_hsla(0.0, 0.0, 0.25, 1.0);
+        let light = Color::from_hsla(0.0, 0.0, 0.75, 1.0);
+
+        Self::new(dark, light, values)
+    }
+
     fn new(dark: Color, light: Color, values: &[u64]) -> Result<Self> {
         let domain = domain(values);
         let inner = GradientBuilder::new()

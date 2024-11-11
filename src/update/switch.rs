@@ -67,7 +67,7 @@ impl Switch {
                 );
                 let mixed = color_art::blend(&mixed, &poe_gradient.at(*poe), BlendMode::Screen);
 
-                let color = Color::Rgb(mixed.red(), mixed.blue(), mixed.green());
+                let color = Color::Rgb(mixed.red(), mixed.green(), mixed.blue());
 
                 context.draw(&Points { coords, color });
             });

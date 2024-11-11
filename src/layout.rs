@@ -5,6 +5,7 @@ use crate::collector::prometheus;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Layout {
+    AccessPoint,
     SwitchFive,
     SwitchEight,
     SwitchEightPlusTwo,
@@ -26,7 +27,12 @@ impl Layout {
         }
 
         let query = format!("count(ifHCInOctets{{{labels}, ifAlias=~\"(Port|SFP) .*\"}})");
-        let result = connection.get_values(query).await?;
+        let result: Vec<_> = connection
+            .get_values(query)
+            .await?
+            .iter()
+            .map(|v| *v as u64)
+            .collect();
 
         let interfaces = result.first().ok_or_eyre("No interfaces found")?;
 
@@ -51,6 +57,11 @@ impl Layout {
 
     pub fn coordinate(&self, index: usize) -> (f64, f64) {
         match self {
+            Layout::AccessPoint => match index {
+                0..=2 => (index as f64, 0.0),
+                3..=4 => ((index + 1) as f64, 0.0),
+                5.. => ((index + 2) as f64, 0.0),
+            },
             Layout::SwitchFive | Layout::SwitchEight => (index as f64, 0.0),
             Layout::SwitchEightPlusTwo => (if index < 8 { index } else { index + 1 } as f64, 0.0),
             Layout::SwitchSixteenPlusTwo => (
@@ -67,6 +78,7 @@ impl Layout {
 
     pub fn height(&self) -> u16 {
         match self {
+            Layout::AccessPoint => 1,
             Layout::SwitchFive | Layout::SwitchEight | Layout::SwitchEightPlusTwo => 1,
             Layout::SwitchSixteenPlusTwo => 2,
             Layout::Unknown => 1,
@@ -75,6 +87,7 @@ impl Layout {
 
     pub fn width(&self) -> u16 {
         match self {
+            Layout::AccessPoint => 9,
             Layout::SwitchFive => 5,
             Layout::SwitchEight => 8,
             Layout::SwitchEightPlusTwo => 11,
@@ -99,6 +112,19 @@ impl Layout {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn coordinate_access_point() {
+        let layout = Layout::AccessPoint;
+
+        assert_eq!((0.0, 0.0), layout.coordinate(0));
+        assert_eq!((2.0, 0.0), layout.coordinate(2));
+
+        assert_eq!((4.0, 0.0), layout.coordinate(3));
+        assert_eq!((5.0, 0.0), layout.coordinate(4));
+
+        assert_eq!((7.0, 0.0), layout.coordinate(5));
+    }
 
     #[test]
     fn coordinate_switch_five() {

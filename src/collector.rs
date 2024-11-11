@@ -1,4 +1,5 @@
 mod absolute;
+mod data;
 mod diff;
 pub mod prometheus;
 
@@ -9,6 +10,7 @@ use std::{
 };
 
 pub use absolute::Absolute;
+pub use data::Data;
 use deadpool::managed::Pool;
 pub use diff::Diff;
 use eyre::{eyre, Context, Result};
@@ -107,7 +109,7 @@ impl Collector {
     }
 }
 
-#[instrument(skip_all, err, fields(url = pool.manager().url(), ?device))]
+#[instrument(skip_all, err, fields(url = pool.manager().url(), device = %device.id()))]
 async fn update(pool: Pool<prometheus::Manager>, device: Arc<Device>) -> Result<Update> {
     trace!("updating");
 
