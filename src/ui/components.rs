@@ -1,14 +1,16 @@
+mod event_log;
+pub mod fps;
+pub mod home;
+
 use crate::ui::{tui::Event, Action, Config};
 use color_eyre::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
+pub use event_log::EventLog;
 use ratatui::{
     layout::{Rect, Size},
     Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
-
-pub mod fps;
-pub mod home;
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 ///

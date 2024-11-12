@@ -4,14 +4,14 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Widget, Wrap},
 };
-use text::ToLine;
 use tokio::sync::broadcast::error::TryRecvError;
 
-use crate::ratatui_tracing::{Event, EventReceiver};
+use crate::ratatui_tracing::{Event, EventReceiver, Format};
 
 pub struct EventLog {
     closed: bool,
     event_receiver: EventReceiver,
+    format: Format,
     log: VecDeque<Event>,
     max_scrollback: usize,
 }
@@ -19,11 +19,16 @@ pub struct EventLog {
 impl EventLog {
     pub fn new(event_receiver: EventReceiver, max_scrollback: usize) -> Self {
         Self {
+            format: Default::default(),
             closed: false,
             event_receiver,
             log: Default::default(),
             max_scrollback,
         }
+    }
+
+    pub fn format(&self) -> Format {
+        self.format.clone()
     }
 
     pub fn log(&self) -> &VecDeque<Event> {
@@ -75,10 +80,12 @@ impl Widget for &EventLog {
     where
         Self: Sized,
     {
+        let format = self.format.read();
+
         let block = Block::new().title("Log").borders(Borders::ALL);
         let block_inner = block.inner(area);
 
-        let text: Vec<Line> = self.log.iter().map(|line| line.to_line()).collect();
+        let text: Vec<Line> = self.log.iter().map(|line| line.to_line(format)).collect();
         let text = Text::from(text);
 
         let text = Paragraph::new(text).block(block).wrap(Wrap { trim: false });
@@ -93,6 +100,6 @@ impl Widget for &EventLog {
 
         let text = text.scroll((line_offset, 0));
 
-        text.render(block_inner, buf)
+        text.render(area, buf)
     }
 }

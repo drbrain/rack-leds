@@ -5,7 +5,7 @@ use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{debug, error, instrument, warn};
+use tracing::{debug, error, instrument, trace, warn};
 
 use crate::{
     collector::UpdateReceiver,
@@ -38,6 +38,7 @@ pub struct App {
 pub enum Mode {
     #[default]
     Home,
+    Format,
 }
 
 impl App {
@@ -180,19 +181,27 @@ impl App {
     fn handle_actions(&mut self, tui: &mut Tui) -> Result<()> {
         while let Ok(action) = self.action_rx.try_recv() {
             if action != Action::Tick && action != Action::Render {
-                debug!(?action);
+                trace!(?action);
             }
 
             match action {
+                Action::ClearScreen => tui.terminal.clear()?,
+                Action::FormatHide => {
+                    self.mode = Mode::Home;
+                    debug!(mode = ?self.mode, "mode switched");
+                }
+                Action::FormatShow => {
+                    self.mode = Mode::Format;
+                    debug!(mode = ?self.mode, "mode switched");
+                }
+                Action::Quit => self.should_quit = true,
+                Action::Render => self.render(tui)?,
+                Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
+                Action::Resume => self.should_suspend = false,
+                Action::Suspend => self.should_suspend = true,
                 Action::Tick => {
                     self.last_tick_key_events.drain(..);
                 }
-                Action::Quit => self.should_quit = true,
-                Action::Suspend => self.should_suspend = true,
-                Action::Resume => self.should_suspend = false,
-                Action::ClearScreen => tui.terminal.clear()?,
-                Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
-                Action::Render => self.render(tui)?,
                 _ => {}
             }
 

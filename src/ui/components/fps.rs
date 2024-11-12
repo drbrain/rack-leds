@@ -9,8 +9,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::ui::Action;
-use crate::ui::Component;
+use crate::ui::{Action, Component};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FpsCounter {

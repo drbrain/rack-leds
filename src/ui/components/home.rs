@@ -10,8 +10,8 @@ use crate::{
     collector::UpdateReceiver,
     device::Id,
     png_builder::PngSender,
-    ratatui_tracing::{EventLog, EventReceiver},
-    ui::{widgets::Display, Action, Component, Config},
+    ratatui_tracing::EventReceiver,
+    ui::{components::EventLog, widgets::Display, Action, Component, Config},
     Columns, PngBuilder, Update,
 };
 
@@ -29,9 +29,9 @@ impl Home {
         columns: Columns,
         updates: UpdateReceiver,
         png_sender: PngSender,
-        event_receiver: EventReceiver,
+        events: EventReceiver,
     ) -> Self {
-        let log = EventLog::new(event_receiver, 50);
+        let log = EventLog::new(events);
 
         Self {
             columns,
@@ -45,12 +45,6 @@ impl Home {
 }
 
 impl Component for Home {
-    fn init(&mut self, area: Size) -> Result<()> {
-        self.log.set_max_lines(area.height.into());
-
-        Ok(())
-    }
-
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
         Ok(())
@@ -61,23 +55,8 @@ impl Component for Home {
         Ok(())
     }
 
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        match action {
-            Action::Tick => {
-                self.log.update();
-            }
-            Action::Render => {
-                // add any logic here that should run on every render
-            }
-            Action::Resize(_, height) => {
-                self.log.set_max_lines(height.into());
-            }
-            _ => {}
-        }
-        Ok(None)
-    }
-
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
+        frame.render_widget(Clear, area);
         let update_png = self.updates.has_changed().unwrap_or(false);
         let (updates, updated_at) = self.updates.borrow().clone();
 
@@ -96,9 +75,13 @@ impl Component for Home {
             self.png_sender.send_replace((png, updated_at));
         };
 
-        frame.render_widget(&self.log, debug);
+        self.log.draw(frame, debug)?;
 
         Ok(())
+    }
+
+    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+        self.log.update(action)
     }
 }
 

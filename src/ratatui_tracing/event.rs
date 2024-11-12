@@ -1,11 +1,14 @@
-use crate::ratatui_tracing::{Scope, ToScopeVisitor};
+use std::collections::HashMap;
+
+use itertools::Itertools;
 use ratatui::{
     style::{Color, Modifier, Style},
-    text::{Line, Span, ToLine},
+    text::{Line, Span},
 };
-use std::collections::HashMap;
 use tracing::{Level, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
+
+use crate::ratatui_tracing::{FormatInner, Scope, ToScopeVisitor};
 
 #[derive(Clone)]
 pub struct Event {
@@ -75,6 +78,92 @@ impl Event {
             fields,
         }
     }
+
+    pub fn message(&self) -> Option<String> {
+        self.fields.get("message").cloned()
+    }
+
+    pub fn to_line(&self, format: FormatInner) -> Line<'_> {
+        let mut line = Line::default();
+
+        if format.display_level {
+            self.add_level(&mut line);
+            line.push_span(Span::raw(" "));
+        };
+
+        self.add_scopes(&mut line);
+
+        if format.display_target {
+            line.push_span(Span::raw(" "));
+            self.add_target(&mut line);
+        }
+
+        self.add_message(&mut line);
+
+        self.add_fields(&mut line);
+
+        line
+    }
+
+    fn add_fields<'a>(&'a self, line: &mut Line<'a>) {
+        self.fields
+            .iter()
+            .filter(|(k, _)| *k != &"message")
+            .sorted_by_cached_key(|(name, _)| *name)
+            .for_each(|(name, value)| {
+                line.push_span(Span::raw(" "));
+                line.push_span(Span::raw(*name));
+                line.push_span(Span::raw("="));
+                line.push_span(Span::raw(value));
+            });
+    }
+
+    fn add_level(&self, line: &mut Line<'_>) {
+        let level = match self.level {
+            Level::ERROR => Span::styled("ERROR", ERROR_STYLE),
+            Level::WARN => Span::styled("WARN ", WARN_STYLE),
+            Level::INFO => Span::styled("INFO ", INFO_STYLE),
+            Level::DEBUG => Span::styled("DEBUG", DEBUG_STYLE),
+            Level::TRACE => Span::styled("TRACE", TRACE_STYLE),
+        };
+
+        line.push_span(level);
+    }
+
+    fn add_message(&self, line: &mut Line<'_>) {
+        if let Some(message) = self.message() {
+            line.push_span(Span::raw(" "));
+            line.push_span(Span::raw(message));
+        }
+    }
+
+    fn add_scopes<'a>(&'a self, line: &mut Line<'a>) {
+        self.scopes.iter().for_each(|scope| {
+            line.push_span(Span::styled(scope.name(), BOLD));
+            line.push_span(Span::styled("{", BOLD));
+
+            scope
+                .fields()
+                .sorted_by_cached_key(|(field, _)| *field)
+                .enumerate()
+                .for_each(|(index, (field, value))| {
+                    line.push_span(Span::styled(*field, ITALIC));
+                    line.push_span(Span::styled("=", DIM));
+                    line.push_span(Span::raw(value));
+                    if index != scope.len() - 1 {
+                        line.push_span(Span::raw(" "));
+                    }
+                });
+
+            line.push_span(Span::styled("}", BOLD));
+            line.push_span(Span::raw(":"));
+        });
+    }
+
+    fn add_target(&self, line: &mut Line<'_>) {
+        line.push_span(Span::styled(self.target.clone(), DIM));
+        line.push_span(Span::styled(":", DIM));
+    }
 }
 
 const ERROR_STYLE: Style = Style::new().fg(Color::Red);
@@ -86,51 +175,3 @@ const TRACE_STYLE: Style = Style::new().fg(Color::Cyan);
 const DIM: Style = Style::new().add_modifier(Modifier::DIM);
 const BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
 const ITALIC: Style = Style::new().add_modifier(Modifier::ITALIC);
-
-impl ToLine for Event {
-    fn to_line(&self) -> Line<'_> {
-        let mut line = Line::default();
-
-        let level = match self.level {
-            Level::ERROR => Span::styled("ERROR", ERROR_STYLE),
-            Level::WARN => Span::styled("WARN ", WARN_STYLE),
-            Level::INFO => Span::styled("INFO ", INFO_STYLE),
-            Level::DEBUG => Span::styled("DEBUG", DEBUG_STYLE),
-            Level::TRACE => Span::styled("TRACE", TRACE_STYLE),
-        };
-
-        line.push_span(level);
-        line.push_span(Span::raw(" "));
-
-        for (index, scope) in self.scopes.iter().enumerate() {
-            line.push_span(Span::styled(scope.name(), BOLD));
-            line.push_span(Span::styled("{", BOLD));
-            for (index, (field, value)) in scope.fields().enumerate() {
-                line.push_span(Span::styled(*field, ITALIC));
-                line.push_span(Span::styled("=", DIM));
-                line.push_span(Span::raw(value));
-                if index != scope.len() - 1 {
-                    line.push_span(Span::raw(" "));
-                }
-            }
-            line.push_span(Span::styled("}", BOLD));
-            if index == self.scopes.len() - 1 {
-                line.push_span(Span::raw(" "));
-            } else {
-                line.push_span(Span::raw(":"));
-            }
-        }
-
-        line.push_span(Span::styled(self.target.clone(), DIM));
-        line.push_span(Span::raw(" "));
-
-        for (name, value) in self.fields.iter() {
-            line.push_span(Span::raw(*name));
-            line.push_span(Span::raw("="));
-            line.push_span(Span::raw(value));
-            line.push_span(Span::raw(" "));
-        }
-
-        line
-    }
-}
