@@ -4,33 +4,65 @@ mod format;
 mod scope;
 mod to_scope_visitor;
 
+use std::time::Instant;
+
 pub use event::Event;
 pub use event_log::EventLog;
 pub use format::{Format, FormatInner};
 pub use scope::Scope;
 pub use to_scope_visitor::ToScopeVisitor;
-use tokio::sync::broadcast;
+use tokio::sync::broadcast::{
+    self,
+    error::{RecvError, TryRecvError},
+};
 use tracing::{
     span::{Attributes, Id, Record},
     Subscriber,
 };
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
-pub type EventReceiver = broadcast::Receiver<Event>;
+pub struct EventReceiver {
+    pub epoch: Instant,
+    pub channel: broadcast::Receiver<Event>,
+}
+
+impl EventReceiver {
+    pub async fn recv(&mut self) -> Result<Event, RecvError> {
+        self.channel.recv().await
+    }
+
+    pub fn resubscribe(&self) -> Self {
+        EventReceiver {
+            epoch: self.epoch,
+            channel: self.channel.resubscribe(),
+        }
+    }
+
+    pub fn try_recv(&mut self) -> Result<Event, TryRecvError> {
+        self.channel.try_recv()
+    }
+}
 
 pub struct RatatuiTracing {
     sender: broadcast::Sender<Event>,
+    epoch: Instant,
 }
 
 impl RatatuiTracing {
     pub fn new() -> Self {
         let (sender, _) = broadcast::channel(100);
 
-        Self { sender }
+        Self {
+            sender,
+            epoch: Instant::now(),
+        }
     }
 
     pub fn subscribe(&self) -> EventReceiver {
-        self.sender.subscribe()
+        EventReceiver {
+            epoch: self.epoch,
+            channel: self.sender.subscribe(),
+        }
     }
 }
 

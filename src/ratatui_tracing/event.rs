@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
 use itertools::Itertools;
 use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
 };
+use time::OffsetDateTime;
 use tracing::{Level, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
@@ -12,6 +13,8 @@ use crate::ratatui_tracing::{FormatInner, Scope, ToScopeVisitor};
 
 #[derive(Clone)]
 pub struct Event {
+    recorded: Instant,
+    recorded_date_time: OffsetDateTime,
     scopes: Vec<Scope>,
     target: String,
     level: Level,
@@ -21,6 +24,8 @@ pub struct Event {
 impl Event {
     pub fn closed() -> Event {
         Self {
+            recorded: Instant::now(),
+            recorded_date_time: OffsetDateTime::now_utc(),
             scopes: Default::default(),
             target: "tracing event channel closed".into(),
             level: Level::WARN,
@@ -32,6 +37,8 @@ impl Event {
         let fields = HashMap::from([("count", format!("{count}"))]);
 
         Self {
+            recorded: Instant::now(),
+            recorded_date_time: OffsetDateTime::now_utc(),
             scopes: Default::default(),
             target: "tracing events missed".into(),
             level: Level::WARN,
@@ -43,6 +50,9 @@ impl Event {
         event: &tracing::Event,
         context: &Context<'_, impl Subscriber + for<'a> LookupSpan<'a>>,
     ) -> Self {
+        let recorded = Instant::now();
+        let recorded_date_time = OffsetDateTime::now_utc();
+
         let mut visitor = ToScopeVisitor::default();
 
         event.record(&mut visitor);
@@ -72,6 +82,8 @@ impl Event {
         scopes.reverse();
 
         Self {
+            recorded,
+            recorded_date_time,
             scopes,
             target: metadata.target().to_string(),
             level: *metadata.level(),
@@ -83,8 +95,13 @@ impl Event {
         self.fields.get("message").cloned()
     }
 
-    pub fn to_line(&self, format: FormatInner) -> Line<'_> {
+    pub fn to_line(&self, epoch: Instant, format: FormatInner) -> Line<'_> {
         let mut line = Line::default();
+
+        if let Some(time) = format.time.format(self, epoch, format.local_offset()) {
+            line.push_span(Span::styled(time, DIM));
+            line.push_span(Span::raw(" "));
+        }
 
         if format.display_level {
             self.add_level(&mut line);
@@ -163,6 +180,14 @@ impl Event {
     fn add_target(&self, line: &mut Line<'_>) {
         line.push_span(Span::styled(self.target.clone(), DIM));
         line.push_span(Span::styled(":", DIM));
+    }
+
+    pub fn recorded(&self) -> Instant {
+        self.recorded
+    }
+
+    pub fn recorded_date_time(&self) -> OffsetDateTime {
+        self.recorded_date_time
     }
 }
 

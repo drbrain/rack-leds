@@ -14,7 +14,7 @@ mod simulator;
 mod ui;
 mod update;
 
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::AtomicBool, Arc, OnceLock};
 
 pub use args::Args;
 use collector::Collector;
@@ -28,6 +28,7 @@ pub use png_builder::PngBuilder;
 use ratatui_tracing::EventReceiver;
 pub use ratatui_tracing::RatatuiTracing;
 pub use simulator::Simulator;
+use time::UtcOffset;
 use tokio::{
     signal::{
         ctrl_c,
@@ -40,10 +41,16 @@ use tracing::{debug, info, instrument};
 use ui::{Action, App};
 pub use update::Update;
 
+pub static LOCAL_OFFSET: OnceLock<UtcOffset> = OnceLock::new();
+
 fn main() -> Result<()> {
     let args = init::args()?;
+
     let (gui_active, event_receiver) = init::tracing(&args);
+
     init::eyre()?;
+
+    init::local_offset();
 
     tokio_main(args, gui_active, event_receiver)
 }

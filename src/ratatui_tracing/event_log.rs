@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time::Instant};
 
 use ratatui::{
     prelude::*,
@@ -25,6 +25,10 @@ impl EventLog {
             log: Default::default(),
             max_scrollback,
         }
+    }
+
+    fn epoch(&self) -> Instant {
+        self.event_receiver.epoch
     }
 
     pub fn format(&self) -> Format {
@@ -80,12 +84,17 @@ impl Widget for &EventLog {
     where
         Self: Sized,
     {
+        let epoch = self.epoch();
         let format = self.format.read();
 
         let block = Block::new().title("Log").borders(Borders::ALL);
         let block_inner = block.inner(area);
 
-        let text: Vec<Line> = self.log.iter().map(|line| line.to_line(format)).collect();
+        let text: Vec<Line> = self
+            .log
+            .iter()
+            .map(|line| line.to_line(epoch, format))
+            .collect();
         let text = Text::from(text);
 
         let text = Paragraph::new(text).block(block).wrap(Wrap { trim: false });

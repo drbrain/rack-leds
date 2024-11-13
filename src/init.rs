@@ -1,11 +1,12 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
-use crate::{ratatui_tracing::EventReceiver, Args, RatatuiTracing};
+use crate::{ratatui_tracing::EventReceiver, Args, RatatuiTracing, LOCAL_OFFSET};
 use clap::Parser;
 use color_eyre::config::HookBuilder;
 use eyre::Result;
 use std::{io::IsTerminal, sync::atomic::Ordering};
-use tracing::error;
+use time::UtcOffset;
+use tracing::{error, warn};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{
     filter::{filter_fn, Directive, LevelFilter},
@@ -67,6 +68,17 @@ pub(crate) fn eyre() -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn local_offset() {
+    LOCAL_OFFSET.get_or_init(|| match UtcOffset::current_local_offset() {
+        Ok(offset) => offset,
+        Err(error) => {
+            warn!(?error, "Log Local RFC3339 will use UTC");
+
+            UtcOffset::UTC
+        }
+    });
+}
+
 pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver) {
     let (gui_active, reader, log) = log_layer();
 
@@ -88,7 +100,7 @@ pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver) {
 /// The layer will be filtered by RUST_LOG if available
 fn log_layer() -> (
     Arc<AtomicBool>,
-    tokio::sync::broadcast::Receiver<crate::ratatui_tracing::Event>,
+    EventReceiver,
     Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync>,
 ) {
     let filter = log_filter();
@@ -149,7 +161,7 @@ fn stdout_layer(
 fn ratatui_layer(
     gui_active: &Arc<AtomicBool>,
 ) -> (
-    tokio::sync::broadcast::Receiver<crate::ratatui_tracing::Event>,
+    EventReceiver,
     Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync>,
 ) {
     let tui = RatatuiTracing::new();
@@ -158,5 +170,6 @@ fn ratatui_layer(
     let tui = tui
         .with_filter(filter_fn(move |_| tui_gui_active.load(Ordering::Relaxed)))
         .boxed();
+
     (reader, tui)
 }

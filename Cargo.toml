@@ -38,6 +38,7 @@ serde_json = "1.0.125"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.3", features = ["derive"] }
+time = { version = "0.3.36", features = ["formatting", "local-offset"] }
 tokio = { version = "1.40.0", features = ["full", "tracing"] }
 tokio-util = "0.7.11"
 tracing = "0.1.40"

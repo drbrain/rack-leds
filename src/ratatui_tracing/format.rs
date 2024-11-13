@@ -1,5 +1,9 @@
+mod inner;
+mod time_format;
+
 use std::sync::{Arc, Mutex, RwLock};
 
+pub use inner::FormatInner;
 use ratatui::{
     layout::{Alignment, Constraint, Layout},
     prelude::{Buffer, Rect},
@@ -10,6 +14,7 @@ use ratatui::{
         TableState, Widget,
     },
 };
+use time_format::TimeFormat;
 
 #[derive(Clone)]
 pub struct Format {
@@ -37,8 +42,6 @@ impl Format {
             guard.selected()
         };
 
-        tracing::warn!(?selected, "editing format");
-
         let Some(selected) = selected else {
             return;
         };
@@ -47,9 +50,12 @@ impl Format {
 
         match selected {
             0 => {
-                format.display_level = !format.display_level;
+                format.time = format.time.next();
             }
             1 => {
+                format.display_level = !format.display_level;
+            }
+            2 => {
                 format.display_target = !format.display_target;
             }
             _ => (),
@@ -129,43 +135,5 @@ impl Widget for &Format {
         let mut state = self.state.lock().unwrap();
 
         StatefulWidget::render(table, area, buf, &mut state);
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct FormatInner {
-    pub display_level: bool,
-    pub display_target: bool,
-}
-
-impl FormatInner {
-    fn as_rows(&self) -> Vec<Row> {
-        vec![
-            Row::new(vec![
-                Text::from("Level").alignment(Alignment::Left),
-                Text::from(visibility(self.display_level)).alignment(Alignment::Right),
-            ]),
-            Row::new(vec![
-                Text::from("Target").alignment(Alignment::Left),
-                Text::from(visibility(self.display_target)).alignment(Alignment::Right),
-            ]),
-        ]
-    }
-}
-
-impl Default for FormatInner {
-    fn default() -> Self {
-        Self {
-            display_level: true,
-            display_target: true,
-        }
-    }
-}
-
-fn visibility(visible: bool) -> &'static str {
-    if visible {
-        "Show"
-    } else {
-        "Hide"
     }
 }

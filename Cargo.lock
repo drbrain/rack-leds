@@ -1838,6 +1838,7 @@ dependencies = [
  "signal-hook",
  "strip-ansi-escapes",
  "strum",
+ "time",
  "tokio",
  "tokio-util",
  "tracing",
