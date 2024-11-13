@@ -1,4 +1,5 @@
 mod inner;
+mod scope;
 mod time_format;
 
 use std::sync::{Arc, Mutex, RwLock};
@@ -14,6 +15,7 @@ use ratatui::{
         TableState, Widget,
     },
 };
+pub use scope::ScopeDisplay;
 use time_format::TimeFormat;
 
 #[derive(Clone)]
@@ -26,7 +28,7 @@ impl Format {
     pub fn read(&self) -> FormatInner {
         let guard = self.inner.read().unwrap();
 
-        *guard
+        guard.clone()
     }
 
     pub fn row_last(&self) {
@@ -56,6 +58,12 @@ impl Format {
                 format.display_level = !format.display_level;
             }
             2 => {
+                format.display_scope = format.display_scope.next();
+            }
+            3 => {
+                format.display_scope_fields = !format.display_scope_fields;
+            }
+            4 => {
                 format.display_target = !format.display_target;
             }
             _ => (),

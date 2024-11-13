@@ -93,7 +93,7 @@ impl Widget for &EventLog {
         let text: Vec<Line> = self
             .log
             .iter()
-            .map(|line| line.to_line(epoch, format))
+            .map(|line| line.to_line(epoch, format.clone()))
             .collect();
         let text = Text::from(text);
 

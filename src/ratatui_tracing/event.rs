@@ -11,6 +11,8 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 use crate::ratatui_tracing::{FormatInner, Scope, ToScopeVisitor};
 
+use super::format::ScopeDisplay;
+
 #[derive(Clone)]
 pub struct Event {
     recorded: Instant,
@@ -108,10 +110,9 @@ impl Event {
             line.push_span(Span::raw(" "));
         };
 
-        self.add_scopes(&mut line);
+        self.add_scopes(&mut line, &format);
 
         if format.display_target {
-            line.push_span(Span::raw(" "));
             self.add_target(&mut line);
         }
 
@@ -154,27 +155,22 @@ impl Event {
         }
     }
 
-    fn add_scopes<'a>(&'a self, line: &mut Line<'a>) {
-        self.scopes.iter().for_each(|scope| {
-            line.push_span(Span::styled(scope.name(), BOLD));
-            line.push_span(Span::styled("{", BOLD));
-
-            scope
-                .fields()
-                .sorted_by_cached_key(|(field, _)| *field)
-                .enumerate()
-                .for_each(|(index, (field, value))| {
-                    line.push_span(Span::styled(*field, ITALIC));
-                    line.push_span(Span::styled("=", DIM));
-                    line.push_span(Span::raw(value));
-                    if index != scope.len() - 1 {
-                        line.push_span(Span::raw(" "));
-                    }
+    fn add_scopes<'a>(&'a self, line: &mut Line<'a>, format: &FormatInner) {
+        match format.display_scope {
+            ScopeDisplay::All => {
+                self.scopes.iter().for_each(|scope| {
+                    add_scope(line, scope, format);
                 });
-
-            line.push_span(Span::styled("}", BOLD));
-            line.push_span(Span::raw(":"));
-        });
+                line.push_span(Span::raw(" "));
+            }
+            ScopeDisplay::Last => {
+                if let Some(scope) = self.scopes.last() {
+                    add_scope(line, scope, format);
+                }
+                line.push_span(Span::raw(" "));
+            }
+            ScopeDisplay::None => (),
+        }
     }
 
     fn add_target(&self, line: &mut Line<'_>) {
@@ -189,6 +185,31 @@ impl Event {
     pub fn recorded_date_time(&self) -> OffsetDateTime {
         self.recorded_date_time
     }
+}
+
+fn add_scope<'a>(line: &mut Line<'a>, scope: &'a Scope, format: &FormatInner) {
+    line.push_span(Span::styled(scope.name(), BOLD));
+
+    if format.display_scope_fields {
+        line.push_span(Span::styled("{", BOLD));
+
+        scope
+            .fields()
+            .sorted_by_cached_key(|(field, _)| *field)
+            .enumerate()
+            .for_each(|(index, (field, value))| {
+                line.push_span(Span::styled(*field, ITALIC));
+                line.push_span(Span::styled("=", DIM));
+                line.push_span(Span::raw(value));
+                if index != scope.len() - 1 {
+                    line.push_span(Span::raw(" "));
+                }
+            });
+
+        line.push_span(Span::styled("}", BOLD));
+    }
+
+    line.push_span(Span::raw(":"));
 }
 
 const ERROR_STYLE: Style = Style::new().fg(Color::Red);

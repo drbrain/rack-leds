@@ -5,12 +5,17 @@ use ratatui::{
 };
 use time::UtcOffset;
 
-use crate::{ratatui_tracing::format::TimeFormat, LOCAL_OFFSET};
+use crate::{
+    ratatui_tracing::format::{ScopeDisplay, TimeFormat},
+    LOCAL_OFFSET,
+};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct FormatInner {
     pub time: TimeFormat,
     pub display_level: bool,
+    pub display_scope: ScopeDisplay,
+    pub display_scope_fields: bool,
     pub display_target: bool,
     local_offset: UtcOffset,
 }
@@ -25,6 +30,14 @@ impl FormatInner {
             Row::new(vec![
                 Text::from("Level").alignment(Alignment::Left),
                 Text::from(visibility(self.display_level)).alignment(Alignment::Right),
+            ]),
+            Row::new(vec![
+                Text::from("Scope Display").alignment(Alignment::Left),
+                self.display_scope.to_text().alignment(Alignment::Right),
+            ]),
+            Row::new(vec![
+                Text::from("Scope Fields").alignment(Alignment::Left),
+                Text::from(visibility(self.display_scope_fields)).alignment(Alignment::Right),
             ]),
             Row::new(vec![
                 Text::from("Target").alignment(Alignment::Left),
@@ -45,6 +58,8 @@ impl Default for FormatInner {
         Self {
             time: Default::default(),
             display_level: true,
+            display_scope: Default::default(),
+            display_scope_fields: true,
             display_target: true,
             local_offset,
         }
