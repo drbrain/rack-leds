@@ -1,24 +1,16 @@
 use std::{
-    ops::{Deref, DerefMut},
+    ops::Deref,
     sync::{Arc, Mutex},
 };
 
 use crossterm::event::KeyEvent;
-use ratatui::{
-    prelude::{Buffer, Rect},
-    style::{Color, Style, Stylize},
-    text::Line,
-    widgets::{
-        Block, BorderType, Clear, HighlightSpacing, List, ListItem, ListState, Padding,
-        StatefulWidget, Widget,
-    },
-};
+use ratatui::widgets::ListState;
 
-use crate::ratatui_tracing::widgets::{FilterEdit, FilterEditState};
+use crate::ratatui_tracing::widgets::FilterEditState;
 use crate::ratatui_tracing::Reloadable;
 
 #[derive(Clone, Default)]
-enum ViewState {
+pub enum ViewState {
     Add,
     Edit {
         original: usize,
@@ -49,21 +41,21 @@ impl ViewState {
 }
 
 #[derive(Clone)]
-pub struct Filter<'a> {
-    reloadable: Reloadable,
-    filter_edit_state: Arc<Mutex<FilterEditState<'a>>>,
-    state: Arc<Mutex<ListState>>,
+pub struct FilterState<'a> {
+    pub(crate) reloadable: Reloadable,
+    pub(crate) filter_edit_state: Arc<Mutex<FilterEditState<'a>>>,
+    pub(crate) list_state: Arc<Mutex<ListState>>,
     view_state: Arc<Mutex<ViewState>>,
 }
 
-impl<'a> Filter<'a> {
+impl<'a> FilterState<'a> {
     pub fn new(reloadable: Reloadable) -> Self {
         let state = ListState::default().with_offset(0).with_selected(Some(0));
 
         Self {
             filter_edit_state: Default::default(),
             reloadable,
-            state: Arc::new(Mutex::new(state)),
+            list_state: Arc::new(Mutex::new(state)),
             view_state: Default::default(),
         }
     }
@@ -96,7 +88,7 @@ impl<'a> Filter<'a> {
 
     pub fn delete_selected(&self) {
         let selected = {
-            let guard = self.state.lock().unwrap();
+            let guard = self.list_state.lock().unwrap();
 
             guard.selected()
         };
@@ -108,7 +100,7 @@ impl<'a> Filter<'a> {
 
     pub fn edit_start(&self) {
         let (original, directive) = {
-            let state = self.state.lock().unwrap();
+            let state = self.list_state.lock().unwrap();
 
             let original = state.selected();
 
@@ -147,53 +139,27 @@ impl<'a> Filter<'a> {
     }
 
     pub fn row_last(&self) {
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.list_state.lock().unwrap();
 
         guard.select_last()
     }
 
     pub fn row_first(&self) {
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.list_state.lock().unwrap();
 
         guard.select_first()
     }
 
     pub fn row_next(&self) {
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.list_state.lock().unwrap();
 
         guard.select_next()
     }
 
     pub fn row_previous(&self) {
-        let mut guard = self.state.lock().unwrap();
+        let mut guard = self.list_state.lock().unwrap();
 
         guard.select_previous()
-    }
-
-    fn render_list(&self, area: Rect, buf: &mut Buffer) {
-        let dialog_border = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(Line::from("Filters").bold())
-            .title_bottom(Line::from("Esc to dismiss").right_aligned().italic())
-            .padding(Padding::symmetric(1, 0));
-
-        let items: Vec<_> = self
-            .reloadable
-            .directives()
-            .iter()
-            .map(|directive| ListItem::new(directive.to_string()))
-            .collect();
-
-        let list = List::new(items)
-            .block(dialog_border)
-            .highlight_symbol("❯")
-            .highlight_spacing(HighlightSpacing::Always)
-            .highlight_style(Style::default().bold().fg(Color::Black).bg(Color::Gray))
-            .direction(ratatui::widgets::ListDirection::TopToBottom);
-
-        let mut state = self.state.lock().unwrap();
-
-        StatefulWidget::render(list, area, buf, &mut state);
     }
 
     pub fn submit(&self) {
@@ -220,31 +186,9 @@ impl<'a> Filter<'a> {
         }
     }
 
-    fn view_state(&self) -> ViewState {
+    pub fn view_state(&self) -> ViewState {
         let view_state = self.view_state.lock().unwrap();
 
         view_state.clone()
-    }
-}
-
-impl Widget for &Filter<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
-        Clear.render(area, buf);
-
-        match self.view_state() {
-            ViewState::Add | ViewState::Edit { .. } => {
-                let mut guard = self.filter_edit_state.lock().unwrap();
-
-                let state = guard.deref_mut();
-
-                FilterEdit::default().render(area, buf, state);
-            }
-            ViewState::View => {
-                self.render_list(area, buf);
-            }
-        }
     }
 }

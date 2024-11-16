@@ -6,13 +6,16 @@ use ratatui::{
 };
 
 use crate::{
-    ratatui_tracing::{EventReceiver, Filter, Reloadable},
+    ratatui_tracing::{
+        widgets::{Filter, FilterState},
+        EventReceiver, Reloadable,
+    },
     ui::{Action, Component},
 };
 
 pub struct EventLog<'a> {
     log: crate::ratatui_tracing::EventLog,
-    filter: Filter<'a>,
+    filter: FilterState<'a>,
     show_filter: bool,
     show_format: bool,
 }
@@ -20,7 +23,7 @@ pub struct EventLog<'a> {
 impl<'a> EventLog<'a> {
     pub fn new(events: EventReceiver, reloadable: Reloadable) -> Self {
         let log = crate::ratatui_tracing::EventLog::new(events, 50);
-        let filter = Filter::new(reloadable);
+        let filter = FilterState::new(reloadable);
 
         Self {
             log,
@@ -42,7 +45,7 @@ impl<'a> EventLog<'a> {
             Layout::vertical([Constraint::Min(2), Constraint::Min(15), Constraint::Fill(1)])
                 .areas(middle);
 
-        frame.render_widget(&self.filter, center);
+        frame.render_stateful_widget(Filter::default(), center, &mut self.filter);
     }
 
     fn render_format(&mut self, area: Rect, frame: &mut Frame<'_>) {
