@@ -12,7 +12,9 @@ pub struct Reloadable {
 }
 
 impl Reloadable {
-    pub fn new(handle: ReloadHandle, default: Directive, directives: Vec<Directive>) -> Self {
+    pub fn new(handle: ReloadHandle, default: Directive, mut directives: Vec<Directive>) -> Self {
+        directives.sort_by_cached_key(|directive| directive.to_string());
+
         let directives = Arc::new(Mutex::new(directives));
 
         Self {
@@ -24,11 +26,11 @@ impl Reloadable {
 
     pub fn delete(&self, index: usize) {
         let updated = {
-            let mut guard = self.directives.lock().unwrap();
+            let mut directives = self.directives.lock().unwrap();
 
-            guard.remove(index);
+            directives.remove(index);
 
-            guard.clone()
+            directives.clone()
         };
 
         self.update_filter(updated);
@@ -36,9 +38,9 @@ impl Reloadable {
 
     pub fn directives(&self) -> Vec<Directive> {
         let directives = {
-            let guard = self.directives.lock().unwrap();
+            let directives = self.directives.lock().unwrap();
 
-            guard.clone()
+            directives.clone()
         };
 
         directives
@@ -46,11 +48,13 @@ impl Reloadable {
 
     pub fn add(&self, directive: Directive) {
         let directives = {
-            let mut guard = self.directives.lock().unwrap();
+            let mut directives = self.directives.lock().unwrap();
 
-            guard.push(directive);
+            directives.push(directive);
 
-            guard.clone()
+            directives.sort_by_cached_key(|directive| directive.to_string());
+
+            directives.clone()
         };
 
         self.update_filter(directives);
