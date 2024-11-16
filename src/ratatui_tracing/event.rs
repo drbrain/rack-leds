@@ -9,9 +9,9 @@ use time::OffsetDateTime;
 use tracing::{Level, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
-use crate::ratatui_tracing::{FormatInner, Scope, ToScopeVisitor};
+use crate::ratatui_tracing::{Scope, ToScopeVisitor};
 
-use super::format::ScopeDisplay;
+use super::widgets::{FormatState, ScopeDisplay};
 
 #[derive(Clone)]
 pub struct Event {
@@ -97,10 +97,10 @@ impl Event {
         self.fields.get("message").cloned()
     }
 
-    pub fn to_line(&self, epoch: Instant, format: FormatInner) -> Line<'_> {
+    pub fn to_line(&self, epoch: Instant, format: &FormatState) -> Line<'_> {
         let mut line = Line::default();
 
-        if let Some(time) = format.time.format(self, epoch, format.local_offset()) {
+        if let Some(time) = format.time.format(self, epoch, format.local_offset) {
             line.push_span(Span::styled(time, DIM));
             line.push_span(Span::raw(" "));
         }
@@ -155,7 +155,7 @@ impl Event {
         }
     }
 
-    fn add_scopes<'a>(&'a self, line: &mut Line<'a>, format: &FormatInner) {
+    fn add_scopes<'a>(&'a self, line: &mut Line<'a>, format: &FormatState) {
         match format.display_scope {
             ScopeDisplay::All => {
                 self.scopes.iter().for_each(|scope| {
@@ -187,7 +187,7 @@ impl Event {
     }
 }
 
-fn add_scope<'a>(line: &mut Line<'a>, scope: &'a Scope, format: &FormatInner) {
+fn add_scope<'a>(line: &mut Line<'a>, scope: &'a Scope, format: &FormatState) {
     line.push_span(Span::styled(scope.name(), BOLD));
 
     if format.display_scope_fields {

@@ -1,18 +1,21 @@
 use std::time::Instant;
 
-use ratatui::text::{Text, ToText};
 use time::{format_description::well_known, OffsetDateTime, UtcOffset};
 
 use crate::ratatui_tracing::Event;
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, strum::IntoStaticStr)]
 pub enum TimeFormat {
+    #[strum(serialize = "Local RFC3339")]
     Rfc3339Local,
+    #[strum(serialize = "UTC RFC3339")]
     Rfc3339Utc,
     /// Hide time
+    #[strum(serialize = "Hide")]
     None,
     /// Time since the process started
     #[default]
+    #[strum(serialize = "Process Uptime")]
     Uptime,
 }
 
@@ -51,17 +54,4 @@ fn format_rfc3339(recorded: OffsetDateTime, offset: Option<UtcOffset>) -> String
     recorded
         .format(&well_known::Rfc3339)
         .unwrap_or("<unknown>".to_string())
-}
-
-impl ToText for TimeFormat {
-    fn to_text(&self) -> Text<'_> {
-        let text = match self {
-            TimeFormat::Rfc3339Local => "Local RFC3339",
-            TimeFormat::Rfc3339Utc => "UTC RFC3339",
-            TimeFormat::None => "Hide",
-            TimeFormat::Uptime => "Process Uptime",
-        };
-
-        Text::from(text)
-    }
 }

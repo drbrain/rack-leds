@@ -1,6 +1,5 @@
 mod event;
 mod event_log;
-mod format;
 mod reloadable;
 mod scope;
 mod to_scope_visitor;
@@ -11,7 +10,6 @@ use std::{env, time::Instant};
 pub use event::Event;
 pub use event_log::EventLog;
 use eyre::Result;
-pub use format::{Format, FormatInner};
 pub use reloadable::Reloadable;
 pub use scope::Scope;
 pub use to_scope_visitor::ToScopeVisitor;

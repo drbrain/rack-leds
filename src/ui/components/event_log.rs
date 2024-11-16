@@ -7,14 +7,14 @@ use ratatui::{
 
 use crate::{
     ratatui_tracing::{
-        widgets::{Filter, FilterState},
+        widgets::{Filter, FilterState, Format},
         EventReceiver, Reloadable,
     },
     ui::{Action, Component},
 };
 
 pub struct EventLog<'a> {
-    log: crate::ratatui_tracing::EventLog,
+    pub(crate) log: crate::ratatui_tracing::EventLog,
     filter: FilterState<'a>,
     show_filter: bool,
     show_format: bool,
@@ -60,7 +60,7 @@ impl<'a> EventLog<'a> {
             Layout::vertical([Constraint::Min(2), Constraint::Min(15), Constraint::Fill(1)])
                 .areas(middle);
 
-        frame.render_widget(&self.log.format(), center);
+        frame.render_stateful_widget(Format::default(), center, &mut self.log.format);
     }
 }
 
@@ -124,19 +124,19 @@ impl Component for EventLog<'_> {
                 self.show_format = false;
             }
             Action::FormatRowEdit => {
-                self.log.format().row_edit();
+                self.log.format.row_edit();
             }
             Action::FormatRowLast => {
-                self.log.format().row_last();
+                self.log.format.row_last();
             }
             Action::FormatRowNext => {
-                self.log.format().row_next();
+                self.log.format.row_next();
             }
             Action::FormatRowTop => {
-                self.log.format().row_first();
+                self.log.format.row_first();
             }
             Action::FormatRowPrevious => {
-                self.log.format().row_previous();
+                self.log.format.row_previous();
             }
             Action::FormatShow => {
                 self.show_format = true;

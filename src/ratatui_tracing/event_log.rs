@@ -6,12 +6,12 @@ use ratatui::{
 };
 use tokio::sync::broadcast::error::TryRecvError;
 
-use crate::ratatui_tracing::{Event, EventReceiver, Format};
+use crate::ratatui_tracing::{widgets::FormatState, Event, EventReceiver};
 
 pub struct EventLog {
     closed: bool,
     event_receiver: EventReceiver,
-    format: Format,
+    pub(crate) format: FormatState,
     log: VecDeque<Event>,
     max_scrollback: usize,
 }
@@ -29,10 +29,6 @@ impl EventLog {
 
     fn epoch(&self) -> Instant {
         self.event_receiver.epoch
-    }
-
-    pub fn format(&self) -> Format {
-        self.format.clone()
     }
 
     pub fn log(&self) -> &VecDeque<Event> {
@@ -85,7 +81,6 @@ impl Widget for &EventLog {
         Self: Sized,
     {
         let epoch = self.epoch();
-        let format = self.format.read();
 
         let block = Block::new().title("Log").borders(Borders::ALL);
         let block_inner = block.inner(area);
@@ -93,7 +88,7 @@ impl Widget for &EventLog {
         let text: Vec<Line> = self
             .log
             .iter()
-            .map(|line| line.to_line(epoch, format.clone()))
+            .map(|line| line.to_line(epoch, &self.format))
             .collect();
         let text = Text::from(text);
 
