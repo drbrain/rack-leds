@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::DerefMut};
+use std::marker::PhantomData;
 
 use ratatui::{
     prelude::*,
@@ -22,9 +22,7 @@ impl<'a> StatefulWidget for Filter<'a> {
 
         match state.view_state() {
             ViewState::Add | ViewState::Edit { .. } => {
-                let mut guard = state.filter_edit_state.lock().unwrap();
-
-                let state = guard.deref_mut();
+                let state = &mut state.filter_edit_state;
 
                 FilterEdit::default().render(area, buf, state);
             }
@@ -49,9 +47,7 @@ impl<'a> StatefulWidget for Filter<'a> {
                     .highlight_style(Style::default().bold().fg(Color::Black).bg(Color::Gray))
                     .direction(ratatui::widgets::ListDirection::TopToBottom);
 
-                let mut state = state.list_state.lock().unwrap();
-
-                StatefulWidget::render(list, area, buf, &mut state);
+                StatefulWidget::render(list, area, buf, &mut state.list_state);
             }
         }
     }
