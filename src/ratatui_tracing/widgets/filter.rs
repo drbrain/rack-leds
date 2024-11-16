@@ -7,7 +7,7 @@ use ratatui::{
     },
 };
 
-use crate::ratatui_tracing::widgets::{filter_state::ViewState, FilterEdit, FilterState};
+use crate::ratatui_tracing::widgets::{FilterEdit, FilterState};
 
 #[derive(Clone, Default)]
 pub struct Filter<'a> {
@@ -20,35 +20,32 @@ impl<'a> StatefulWidget for Filter<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Clear.render(area, buf);
 
-        match state.view_state() {
-            ViewState::Add | ViewState::Edit { .. } => {
-                let state = &mut state.filter_edit_state;
+        if state.is_editing() {
+            let state = &mut state.filter_edit_state;
 
-                FilterEdit::default().render(area, buf, state);
-            }
-            ViewState::View => {
-                let dialog_border = Block::bordered()
-                    .border_type(BorderType::Rounded)
-                    .title(Line::from("Filters").bold())
-                    .title_bottom(Line::from("Esc to dismiss").right_aligned().italic())
-                    .padding(Padding::symmetric(1, 0));
+            FilterEdit::default().render(area, buf, state);
+        } else {
+            let dialog_border = Block::bordered()
+                .border_type(BorderType::Rounded)
+                .title(Line::from("Filters").bold())
+                .title_bottom(Line::from("Esc to dismiss").right_aligned().italic())
+                .padding(Padding::symmetric(1, 0));
 
-                let items: Vec<_> = state
-                    .reloadable
-                    .directives()
-                    .iter()
-                    .map(|directive| ListItem::new(directive.to_string()))
-                    .collect();
+            let items: Vec<_> = state
+                .reloadable
+                .directives()
+                .iter()
+                .map(|directive| ListItem::new(directive.to_string()))
+                .collect();
 
-                let list = List::new(items)
-                    .block(dialog_border)
-                    .highlight_symbol("❯")
-                    .highlight_spacing(HighlightSpacing::Always)
-                    .highlight_style(Style::default().bold().fg(Color::Black).bg(Color::Gray))
-                    .direction(ratatui::widgets::ListDirection::TopToBottom);
+            let list = List::new(items)
+                .block(dialog_border)
+                .highlight_symbol("❯")
+                .highlight_spacing(HighlightSpacing::Always)
+                .highlight_style(Style::default().bold().fg(Color::Black).bg(Color::Gray))
+                .direction(ratatui::widgets::ListDirection::TopToBottom);
 
-                StatefulWidget::render(list, area, buf, &mut state.list_state);
-            }
+            StatefulWidget::render(list, area, buf, &mut state.list_state);
         }
     }
 }

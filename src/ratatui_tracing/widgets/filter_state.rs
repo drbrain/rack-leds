@@ -5,7 +5,7 @@ use crate::ratatui_tracing::widgets::FilterEditState;
 use crate::ratatui_tracing::Reloadable;
 
 #[derive(Clone, Default)]
-pub enum ViewState {
+enum ViewState {
     Add,
     Edit {
         original: usize,
@@ -102,6 +102,9 @@ impl<'a> FilterState<'a> {
         self.filter_edit_state.insert(directive);
     }
 
+    pub fn is_editing(&self) -> bool {
+        matches!(self.view_state, ViewState::Add | ViewState::Edit { .. })
+    }
     pub fn key(&mut self, key: KeyEvent) {
         self.filter_edit_state.key(key);
     }
@@ -138,9 +141,5 @@ impl<'a> FilterState<'a> {
 
             self.view_state = self.view_state.to_view();
         }
-    }
-
-    pub fn view_state(&self) -> ViewState {
-        self.view_state.clone()
     }
 }
