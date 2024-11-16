@@ -1,17 +1,42 @@
-use std::marker::PhantomData;
-
 use ratatui::{
     prelude::*,
     widgets::{
-        Block, BorderType, Clear, HighlightSpacing, List, ListItem, Padding, StatefulWidget,
+        Block, BorderType, Clear, HighlightSpacing, List, ListDirection, ListItem, Padding,
+        StatefulWidget,
     },
 };
 
 use crate::ratatui_tracing::widgets::{FilterEdit, FilterState};
 
-#[derive(Clone, Default)]
 pub struct Filter<'a> {
-    _data: PhantomData<&'a ()>,
+    block: Block<'a>,
+    block_help_style: Style,
+    block_title_style: Style,
+    list_highlight_style: Style,
+    list_highlight_symbol: String,
+}
+
+impl<'a> Filter<'a> {}
+
+impl<'a> Default for Filter<'a> {
+    fn default() -> Self {
+        let block = Block::bordered()
+            .border_type(BorderType::Rounded)
+            .padding(Padding::symmetric(1, 0));
+
+        let block_title_style = Style::default().bold();
+        let block_help_style = Style::default().italic();
+        let list_highlight_style = Style::default().bold().fg(Color::Black).bg(Color::Gray);
+        let list_highlight_symbol = "❯".into();
+
+        Self {
+            block,
+            block_help_style,
+            block_title_style,
+            list_highlight_style,
+            list_highlight_symbol,
+        }
+    }
 }
 
 impl<'a> StatefulWidget for Filter<'a> {
@@ -25,12 +50,6 @@ impl<'a> StatefulWidget for Filter<'a> {
 
             FilterEdit::default().render(area, buf, state);
         } else {
-            let dialog_border = Block::bordered()
-                .border_type(BorderType::Rounded)
-                .title(Line::from("Filters").bold())
-                .title_bottom(Line::from("Esc to dismiss").right_aligned().italic())
-                .padding(Padding::symmetric(1, 0));
-
             let items: Vec<_> = state
                 .reloadable
                 .directives()
@@ -38,12 +57,21 @@ impl<'a> StatefulWidget for Filter<'a> {
                 .map(|directive| ListItem::new(directive.to_string()))
                 .collect();
 
+            let block = self
+                .block
+                .title(Line::from("Filters").style(self.block_title_style))
+                .title_bottom(
+                    Line::from("Esc to dismiss")
+                        .right_aligned()
+                        .style(self.block_help_style),
+                );
+
             let list = List::new(items)
-                .block(dialog_border)
-                .highlight_symbol("❯")
+                .block(block)
+                .highlight_symbol(&self.list_highlight_symbol)
                 .highlight_spacing(HighlightSpacing::Always)
-                .highlight_style(Style::default().bold().fg(Color::Black).bg(Color::Gray))
-                .direction(ratatui::widgets::ListDirection::TopToBottom);
+                .highlight_style(self.list_highlight_style)
+                .direction(ListDirection::TopToBottom);
 
             StatefulWidget::render(list, area, buf, &mut state.list_state);
         }
