@@ -1,5 +1,5 @@
 use std::{
-    ops::Deref,
+    ops::{Deref, DerefMut},
     sync::{Arc, Mutex},
 };
 
@@ -14,7 +14,7 @@ use ratatui::{
     },
 };
 
-use crate::ratatui_tracing::FilterEdit;
+use crate::ratatui_tracing::widgets::{FilterEdit, FilterEditState};
 use crate::ratatui_tracing::Reloadable;
 
 #[derive(Clone, Default)]
@@ -51,7 +51,7 @@ impl ViewState {
 #[derive(Clone)]
 pub struct Filter<'a> {
     reloadable: Reloadable,
-    filter_edit: FilterEdit<'a>,
+    filter_edit_state: Arc<Mutex<FilterEditState<'a>>>,
     state: Arc<Mutex<ListState>>,
     view_state: Arc<Mutex<ViewState>>,
 }
@@ -61,7 +61,7 @@ impl<'a> Filter<'a> {
         let state = ListState::default().with_offset(0).with_selected(Some(0));
 
         Self {
-            filter_edit: Default::default(),
+            filter_edit_state: Default::default(),
             reloadable,
             state: Arc::new(Mutex::new(state)),
             view_state: Default::default(),
@@ -74,16 +74,24 @@ impl<'a> Filter<'a> {
         if let Some(state) = view_state.try_to_add() {
             *view_state = state;
 
-            self.filter_edit.clear();
+            let mut guard = self.filter_edit_state.lock().unwrap();
+
+            guard.clear();
         }
     }
 
     pub fn cancel(&self) {
-        let mut view_state = self.view_state.lock().unwrap();
+        {
+            let mut view_state = self.view_state.lock().unwrap();
 
-        *view_state = view_state.to_view();
+            *view_state = view_state.to_view();
+        }
 
-        self.filter_edit.clear();
+        {
+            let mut guard = self.filter_edit_state.lock().unwrap();
+
+            guard.clear();
+        }
     }
 
     pub fn delete_selected(&self) {
@@ -124,13 +132,18 @@ impl<'a> Filter<'a> {
 
         *view_state = state;
 
-        self.filter_edit.clear();
+        drop(view_state);
 
-        self.filter_edit.insert(directive);
+        let mut guard = self.filter_edit_state.lock().unwrap();
+
+        guard.clear();
+
+        guard.insert(directive);
     }
 
     pub fn key(&self, key: KeyEvent) {
-        self.filter_edit.key(key);
+        let mut guard = self.filter_edit_state.lock().unwrap();
+        guard.key(key);
     }
 
     pub fn row_last(&self) {
@@ -184,9 +197,15 @@ impl<'a> Filter<'a> {
     }
 
     pub fn submit(&self) {
+        let directive = {
+            let mut guard = self.filter_edit_state.lock().unwrap();
+
+            guard.directive()
+        };
+
         let mut view_state = self.view_state.lock().unwrap();
 
-        if let Some(directive) = self.filter_edit.directive() {
+        if let Some(directive) = directive {
             match view_state.deref() {
                 ViewState::Add => (),
                 ViewState::Edit { original } => {
@@ -217,7 +236,11 @@ impl Widget for &Filter<'_> {
 
         match self.view_state() {
             ViewState::Add | ViewState::Edit { .. } => {
-                self.filter_edit.render(area, buf);
+                let mut guard = self.filter_edit_state.lock().unwrap();
+
+                let state = guard.deref_mut();
+
+                FilterEdit::default().render(area, buf, state);
             }
             ViewState::View => {
                 self.render_list(area, buf);
