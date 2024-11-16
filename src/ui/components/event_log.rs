@@ -13,11 +13,18 @@ use crate::{
     ui::{Action, Component},
 };
 
+#[derive(Default)]
+enum ViewState {
+    Filter,
+    Format,
+    #[default]
+    None,
+}
+
 pub struct EventLog<'a> {
     pub(crate) log: crate::ratatui_tracing::EventLog,
     filter: FilterState<'a>,
-    show_filter: bool,
-    show_format: bool,
+    view_state: ViewState,
 }
 
 impl<'a> EventLog<'a> {
@@ -28,8 +35,7 @@ impl<'a> EventLog<'a> {
         Self {
             log,
             filter,
-            show_filter: false,
-            show_format: false,
+            view_state: Default::default(),
         }
     }
 
@@ -74,12 +80,14 @@ impl Component for EventLog<'_> {
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
         frame.render_widget(&self.log, area);
 
-        if self.show_format {
-            self.render_format(area, frame);
-        }
-
-        if self.show_filter {
-            self.render_filter(area, frame);
+        match self.view_state {
+            ViewState::Filter => {
+                self.render_filter(area, frame);
+            }
+            ViewState::Format => {
+                self.render_format(area, frame);
+            }
+            ViewState::None => (),
         }
 
         Ok(())
@@ -100,7 +108,7 @@ impl Component for EventLog<'_> {
                 self.filter.edit_start();
             }
             Action::FilterHide => {
-                self.show_filter = false;
+                self.view_state = ViewState::None;
             }
             Action::FilterLast => {
                 self.filter.row_last();
@@ -112,7 +120,7 @@ impl Component for EventLog<'_> {
                 self.filter.row_previous();
             }
             Action::FilterShow => {
-                self.show_filter = true;
+                self.view_state = ViewState::Filter;
             }
             Action::FilterSubmit => {
                 self.filter.submit();
@@ -121,7 +129,7 @@ impl Component for EventLog<'_> {
                 self.filter.row_first();
             }
             Action::FormatHide => {
-                self.show_format = false;
+                self.view_state = ViewState::None;
             }
             Action::FormatRowEdit => {
                 self.log.format.row_edit();
@@ -139,7 +147,7 @@ impl Component for EventLog<'_> {
                 self.log.format.row_previous();
             }
             Action::FormatShow => {
-                self.show_format = true;
+                self.view_state = ViewState::Format;
             }
             Action::Input(key) => {
                 self.filter.key(key);
