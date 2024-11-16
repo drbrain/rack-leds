@@ -1,5 +1,4 @@
 mod event;
-mod event_log;
 mod reloadable;
 mod scope;
 mod to_scope_visitor;
@@ -8,7 +7,6 @@ pub mod widgets;
 use std::{env, time::Instant};
 
 pub use event::Event;
-pub use event_log::EventLog;
 use eyre::Result;
 pub use reloadable::Reloadable;
 pub use scope::Scope;

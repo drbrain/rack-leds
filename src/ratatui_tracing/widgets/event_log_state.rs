@@ -1,25 +1,21 @@
 use std::{collections::VecDeque, time::Instant};
 
-use ratatui::{
-    prelude::*,
-    widgets::{Block, Borders, Paragraph, Widget, Wrap},
-};
 use tokio::sync::broadcast::error::TryRecvError;
 
 use crate::ratatui_tracing::{
     widgets::FilterState, widgets::FormatState, Event, EventReceiver, Reloadable,
 };
 
-pub struct EventLog<'a> {
+pub struct EventLogState<'a> {
     closed: bool,
     event_receiver: EventReceiver,
     pub(crate) filter: FilterState<'a>,
     pub(crate) format: FormatState,
-    log: VecDeque<Event>,
+    pub(crate) log: VecDeque<Event>,
     max_scrollback: usize,
 }
 
-impl<'a> EventLog<'a> {
+impl<'a> EventLogState<'a> {
     pub fn new(
         event_receiver: EventReceiver,
         max_scrollback: usize,
@@ -37,12 +33,8 @@ impl<'a> EventLog<'a> {
         }
     }
 
-    fn epoch(&self) -> Instant {
+    pub(crate) fn epoch(&self) -> Instant {
         self.event_receiver.epoch
-    }
-
-    pub fn log(&self) -> &VecDeque<Event> {
-        &self.log
     }
 
     pub fn set_max_lines(&mut self, max_lines: usize) {
@@ -82,38 +74,5 @@ impl<'a> EventLog<'a> {
 
             self.trim();
         }
-    }
-}
-
-impl<'a> Widget for &EventLog<'a> {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
-        let epoch = self.epoch();
-
-        let block = Block::new().title("Log").borders(Borders::ALL);
-        let block_inner = block.inner(area);
-
-        let text: Vec<Line> = self
-            .log
-            .iter()
-            .map(|line| line.to_line(epoch, &self.format))
-            .collect();
-        let text = Text::from(text);
-
-        let text = Paragraph::new(text).block(block).wrap(Wrap { trim: false });
-
-        // NOTE: Scrolling is hard https://github.com/ratatui/ratatui/issues/174
-        // and Lists don't allow wrapping https://github.com/ratatui/ratatui/issues/128
-        let line_offset = text
-            .line_count(block_inner.width)
-            .saturating_sub(block_inner.height.into())
-            .try_into()
-            .unwrap_or(0);
-
-        let text = text.scroll((line_offset, 0));
-
-        text.render(area, buf)
     }
 }
