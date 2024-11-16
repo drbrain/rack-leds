@@ -6,22 +6,32 @@ use ratatui::{
 };
 use tokio::sync::broadcast::error::TryRecvError;
 
-use crate::ratatui_tracing::{widgets::FormatState, Event, EventReceiver};
+use crate::ratatui_tracing::{
+    widgets::FilterState, widgets::FormatState, Event, EventReceiver, Reloadable,
+};
 
-pub struct EventLog {
+pub struct EventLog<'a> {
     closed: bool,
     event_receiver: EventReceiver,
+    pub(crate) filter: FilterState<'a>,
     pub(crate) format: FormatState,
     log: VecDeque<Event>,
     max_scrollback: usize,
 }
 
-impl EventLog {
-    pub fn new(event_receiver: EventReceiver, max_scrollback: usize) -> Self {
+impl<'a> EventLog<'a> {
+    pub fn new(
+        event_receiver: EventReceiver,
+        max_scrollback: usize,
+        reloadable: Reloadable,
+    ) -> Self {
+        let filter = FilterState::new(reloadable);
+
         Self {
-            format: Default::default(),
             closed: false,
             event_receiver,
+            filter,
+            format: Default::default(),
             log: Default::default(),
             max_scrollback,
         }
@@ -75,7 +85,7 @@ impl EventLog {
     }
 }
 
-impl Widget for &EventLog {
+impl<'a> Widget for &EventLog<'a> {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,

@@ -7,7 +7,7 @@ use ratatui::{
 
 use crate::{
     ratatui_tracing::{
-        widgets::{Filter, FilterState, Format},
+        widgets::{Filter, Format},
         EventReceiver, Reloadable,
     },
     ui::{Action, Component},
@@ -22,19 +22,16 @@ enum ViewState {
 }
 
 pub struct EventLog<'a> {
-    pub(crate) log: crate::ratatui_tracing::EventLog,
-    filter: FilterState<'a>,
+    pub(crate) log: crate::ratatui_tracing::EventLog<'a>,
     view_state: ViewState,
 }
 
 impl<'a> EventLog<'a> {
     pub fn new(events: EventReceiver, reloadable: Reloadable) -> Self {
-        let log = crate::ratatui_tracing::EventLog::new(events, 50);
-        let filter = FilterState::new(reloadable);
+        let log = crate::ratatui_tracing::EventLog::new(events, 50, reloadable);
 
         Self {
             log,
-            filter,
             view_state: Default::default(),
         }
     }
@@ -51,7 +48,7 @@ impl<'a> EventLog<'a> {
             Layout::vertical([Constraint::Min(2), Constraint::Min(15), Constraint::Fill(1)])
                 .areas(middle);
 
-        frame.render_stateful_widget(Filter::default(), center, &mut self.filter);
+        frame.render_stateful_widget(Filter::default(), center, &mut self.log.filter);
     }
 
     fn render_format(&mut self, area: Rect, frame: &mut Frame<'_>) {
@@ -96,37 +93,37 @@ impl Component for EventLog<'_> {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::FilterAdd => {
-                self.filter.add_start();
+                self.log.filter.add_start();
             }
             Action::FilterCancel => {
-                self.filter.cancel();
+                self.log.filter.cancel();
             }
             Action::FilterDelete => {
-                self.filter.delete_selected();
+                self.log.filter.delete_selected();
             }
             Action::FilterEdit => {
-                self.filter.edit_start();
+                self.log.filter.edit_start();
             }
             Action::FilterHide => {
                 self.view_state = ViewState::None;
             }
             Action::FilterLast => {
-                self.filter.row_last();
+                self.log.filter.row_last();
             }
             Action::FilterNext => {
-                self.filter.row_next();
+                self.log.filter.row_next();
             }
             Action::FilterPrevious => {
-                self.filter.row_previous();
+                self.log.filter.row_previous();
             }
             Action::FilterShow => {
                 self.view_state = ViewState::Filter;
             }
             Action::FilterSubmit => {
-                self.filter.submit();
+                self.log.filter.submit();
             }
             Action::FilterTop => {
-                self.filter.row_first();
+                self.log.filter.row_first();
             }
             Action::FormatHide => {
                 self.view_state = ViewState::None;
@@ -150,7 +147,7 @@ impl Component for EventLog<'_> {
                 self.view_state = ViewState::Format;
             }
             Action::Input(key) => {
-                self.filter.key(key);
+                self.log.filter.key(key);
             }
             Action::Resize(_, height) => {
                 self.log.set_max_lines(height.into());
