@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 pub use inner::FormatInner;
 use ratatui::{
-    layout::{Alignment, Constraint, Layout},
+    layout::{Alignment, Constraint},
     prelude::{Buffer, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Text},
@@ -112,13 +112,8 @@ impl Widget for &Format {
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .title(Line::from("Format").bold())
+            .title_bottom(Line::from("Esc to dismiss").right_aligned().italic())
             .padding(Padding::symmetric(1, 0));
-
-        let dismiss = Line::from("f to dismiss").right_aligned().italic();
-        let [_, dismiss_area] =
-            Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(block.inner(area));
-
-        dismiss.render(dismiss_area, buf);
 
         let rows = format.as_rows();
         let widths = Constraint::from_fills([1, 1]);

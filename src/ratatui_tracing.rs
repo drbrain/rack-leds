@@ -1,14 +1,21 @@
 mod event;
 mod event_log;
+mod filter;
+mod filter_edit;
 mod format;
+mod reloadable;
 mod scope;
 mod to_scope_visitor;
 
-use std::time::Instant;
+use std::{env, time::Instant};
 
 pub use event::Event;
 pub use event_log::EventLog;
+use eyre::Result;
+pub use filter::Filter;
+pub use filter_edit::FilterEdit;
 pub use format::{Format, FormatInner};
+pub use reloadable::Reloadable;
 pub use scope::Scope;
 pub use to_scope_visitor::ToScopeVisitor;
 use tokio::sync::broadcast::{
@@ -16,10 +23,18 @@ use tokio::sync::broadcast::{
     error::{RecvError, TryRecvError},
 };
 use tracing::{
+    level_filters::LevelFilter,
     span::{Attributes, Id, Record},
     Subscriber,
 };
-use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
+use tracing_subscriber::{
+    filter::{Directive, ParseError},
+    layer::Context,
+    registry::LookupSpan,
+    reload, EnvFilter, Layer, Registry,
+};
+
+pub type ReloadHandle = reload::Handle<EnvFilter, Registry>;
 
 pub struct EventReceiver {
     pub epoch: Instant,
@@ -115,5 +130,63 @@ where
         } else {
             extensions.insert(scope);
         }
+    }
+}
+
+pub struct EnvFilterResult {
+    pub layer: reload::Layer<EnvFilter, Registry>,
+    pub reloadable: Reloadable,
+    pub invalid_directives: Option<Vec<(String, ParseError)>>,
+}
+
+pub fn env_filter(default: Option<Directive>, env_var: Option<String>) -> EnvFilterResult {
+    let default = default.unwrap_or(LevelFilter::ERROR.into());
+    let env_var = env_var.as_deref().unwrap_or(EnvFilter::DEFAULT_ENV);
+    let filter = env::var(env_var).unwrap_or_default();
+
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(default.clone())
+        .parse_lossy("");
+
+    if filter.is_empty() {
+        let (layer, reload_handle) = reload::Layer::new(env_filter);
+
+        return EnvFilterResult {
+            layer,
+            reloadable: Reloadable::new(reload_handle, default, vec![]),
+            invalid_directives: None,
+        };
+    }
+
+    let mut directives = vec![];
+    let mut invalid_directives = vec![];
+
+    filter
+        .split(',')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.parse::<Directive>().map_err(|e| (s.to_string(), e)))
+        .for_each(|r| match r {
+            Ok(directive) => directives.push(directive),
+            Err(invalid) => invalid_directives.push(invalid),
+        });
+
+    let filter = directives.iter().fold(env_filter, |filter, directive| {
+        filter.add_directive(directive.clone())
+    });
+
+    let (layer, reload_handle) = reload::Layer::new(filter);
+
+    let reloadable = Reloadable::new(reload_handle, default, directives);
+
+    let invalid_directives = if invalid_directives.is_empty() {
+        None
+    } else {
+        Some(invalid_directives)
+    };
+
+    EnvFilterResult {
+        layer,
+        reloadable,
+        invalid_directives,
     }
 }

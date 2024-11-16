@@ -10,7 +10,7 @@ use tracing::{debug, error, instrument, trace, warn};
 use crate::{
     collector::UpdateReceiver,
     png_builder::PngSender,
-    ratatui_tracing::EventReceiver,
+    ratatui_tracing::{EventReceiver, Reloadable},
     ui::{
         action::Action,
         components::{fps::FpsCounter, home::Home, Component},
@@ -38,13 +38,18 @@ pub struct App {
 pub enum Mode {
     #[default]
     Home,
+    Filter,
+    FilterEdit,
+    FilterSubmit,
     Format,
 }
 
 impl App {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         gui_active: Arc<AtomicBool>,
         events: EventReceiver,
+        reloadable: Reloadable,
         tick_rate: f64,
         frame_rate: f64,
         columns: Columns,
@@ -60,7 +65,7 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Home::new(columns, updates, png_sender, events)),
+                Box::new(Home::new(columns, updates, png_sender, events, reloadable)),
                 Box::new(FpsCounter::default()),
             ],
             should_quit: false,
@@ -163,6 +168,12 @@ impl App {
                 action_tx.send(action.clone())?;
             }
             _ => {
+                if self.mode == Mode::FilterEdit {
+                    action_tx.send(Action::Input(key))?;
+
+                    return Ok(());
+                }
+
                 // If the key was not handled as a single key action,
                 // then consider it for multi-key combinations.
                 self.last_tick_key_events.push(key);
@@ -186,7 +197,15 @@ impl App {
 
             match action {
                 Action::ClearScreen => tui.terminal.clear()?,
-                Action::FormatHide => {
+                Action::FilterAdd | Action::FilterEdit => {
+                    self.mode = Mode::FilterEdit;
+                    debug!(mode = ?self.mode, "mode switched");
+                }
+                Action::FilterCancel | Action::FilterShow | Action::FilterSubmit => {
+                    self.mode = Mode::Filter;
+                    debug!(mode = ?self.mode, "mode switched");
+                }
+                Action::FilterHide | Action::FormatHide => {
                     self.mode = Mode::Home;
                     debug!(mode = ?self.mode, "mode switched");
                 }

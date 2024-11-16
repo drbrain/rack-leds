@@ -25,8 +25,8 @@ use eyre::Result;
 pub use http::Http;
 pub use layout::Layout;
 pub use png_builder::PngBuilder;
-use ratatui_tracing::EventReceiver;
 pub use ratatui_tracing::RatatuiTracing;
+use ratatui_tracing::{EventReceiver, Reloadable};
 pub use simulator::Simulator;
 use time::UtcOffset;
 use tokio::{
@@ -46,13 +46,13 @@ pub static LOCAL_OFFSET: OnceLock<UtcOffset> = OnceLock::new();
 fn main() -> Result<()> {
     let args = init::args()?;
 
-    let (gui_active, event_receiver) = init::tracing(&args);
+    let (gui_active, event_receiver, reload_handle) = init::tracing(&args);
 
     init::eyre()?;
 
     init::local_offset();
 
-    tokio_main(args, gui_active, event_receiver)
+    tokio_main(args, gui_active, event_receiver, reload_handle)
 }
 
 #[tokio::main]
@@ -60,6 +60,7 @@ async fn tokio_main(
     args: Args,
     gui_active: Arc<AtomicBool>,
     event_receiver: EventReceiver,
+    reloadable: Reloadable,
 ) -> Result<()> {
     debug!("args: {:#?}", args);
 
@@ -92,6 +93,7 @@ async fn tokio_main(
         let mut app = App::new(
             gui_active,
             event_receiver,
+            reloadable,
             args.tick_rate,
             args.frame_rate,
             devices.columns().clone(),

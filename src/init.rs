@@ -1,6 +1,9 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
-use crate::{ratatui_tracing::EventReceiver, Args, RatatuiTracing, LOCAL_OFFSET};
+use crate::{
+    ratatui_tracing::{self, EnvFilterResult, EventReceiver, Reloadable},
+    Args, RatatuiTracing, LOCAL_OFFSET,
+};
 use clap::Parser;
 use color_eyre::config::HookBuilder;
 use eyre::Result;
@@ -12,7 +15,7 @@ use tracing_subscriber::{
     filter::{filter_fn, Directive, LevelFilter},
     fmt::{self, time::OffsetTime},
     prelude::*,
-    EnvFilter, Layer,
+    reload, EnvFilter, Layer, Registry,
 };
 
 pub(crate) fn args() -> Result<Args> {
@@ -79,8 +82,8 @@ pub(crate) fn local_offset() {
     });
 }
 
-pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver) {
-    let (gui_active, reader, log) = log_layer();
+pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver, Reloadable) {
+    let (gui_active, reader, reloadable, log) = log_layer();
 
     let registry = tracing_subscriber::registry()
         .with(log)
@@ -92,7 +95,7 @@ pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver) {
         registry.init();
     };
 
-    (gui_active, reader)
+    (gui_active, reader, reloadable)
 }
 
 /// A layer for logging either to stdout or ratatui depending on which is active
@@ -101,9 +104,10 @@ pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver) {
 fn log_layer() -> (
     Arc<AtomicBool>,
     EventReceiver,
+    Reloadable,
     Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync>,
 ) {
-    let filter = log_filter();
+    let (filter, reloadable) = log_filter();
 
     let gui_active = Arc::new(AtomicBool::new(false));
 
@@ -112,32 +116,25 @@ fn log_layer() -> (
     let (reader, tui) = ratatui_layer(&gui_active);
 
     let log = stdout.and_then(tui).with_filter(filter).boxed();
-    (gui_active, reader, log)
+
+    (gui_active, reader, reloadable, log)
 }
 
 /// Create a filter from RUST_LOG
-fn log_filter() -> EnvFilter {
+fn log_filter() -> (reload::Layer<EnvFilter, Registry>, Reloadable) {
     let default_directive: Directive = LevelFilter::INFO.into();
 
-    let result = EnvFilter::builder()
-        .with_default_directive(default_directive.clone())
-        .from_env();
+    let EnvFilterResult {
+        layer,
+        reloadable,
+        invalid_directives,
+    } = ratatui_tracing::env_filter(Some(default_directive), None);
 
-    let (filter, error) = match result {
-        Ok(filter) => (filter, None),
-        Err(e) => {
-            let filter = EnvFilter::builder()
-                .with_default_directive(default_directive)
-                .parse_lossy("");
-
-            (filter, Some(e))
-        }
-    };
-
-    if let Some(error) = error {
-        error!(?error, "Invalid RUST_LOG, using default filter \"info\"");
+    if let Some(invalid_directives) = invalid_directives {
+        error!(invalid = ?invalid_directives, "invalid filter directives")
     }
-    filter
+
+    (layer, reloadable)
 }
 
 /// Log to stdout when gui_active is false

@@ -10,28 +10,29 @@ use crate::{
     collector::UpdateReceiver,
     device::Id,
     png_builder::PngSender,
-    ratatui_tracing::EventReceiver,
+    ratatui_tracing::{EventReceiver, Reloadable},
     ui::{components::EventLog, widgets::Display, Action, Component, Config},
     Columns, PngBuilder, Update,
 };
 
-pub struct Home {
+pub struct Home<'a> {
     columns: Columns,
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     updates: UpdateReceiver,
     png_sender: PngSender,
-    log: EventLog,
+    log: EventLog<'a>,
 }
 
-impl Home {
+impl<'a> Home<'a> {
     pub fn new(
         columns: Columns,
         updates: UpdateReceiver,
         png_sender: PngSender,
         events: EventReceiver,
+        reloadable: Reloadable,
     ) -> Self {
-        let log = EventLog::new(events);
+        let log = EventLog::new(events, reloadable);
 
         Self {
             columns,
@@ -44,7 +45,7 @@ impl Home {
     }
 }
 
-impl Component for Home {
+impl Component for Home<'_> {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
         Ok(())

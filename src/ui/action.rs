@@ -1,3 +1,4 @@
+use crossterm::event::KeyEvent;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
@@ -5,6 +6,17 @@ use strum::Display;
 pub enum Action {
     ClearScreen,
     Error(String),
+    FilterAdd,
+    FilterCancel,
+    FilterDelete,
+    FilterEdit,
+    FilterHide,
+    FilterLast,
+    FilterNext,
+    FilterPrevious,
+    FilterTop,
+    FilterShow,
+    FilterSubmit,
     FormatHide,
     FormatRowEdit,
     FormatRowLast,
@@ -12,6 +24,7 @@ pub enum Action {
     FormatRowTop,
     FormatRowPrevious,
     FormatShow,
+    Input(KeyEvent),
     Help,
     Quit,
     Render,
