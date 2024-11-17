@@ -1,9 +1,9 @@
-use std::{collections::VecDeque, time::Instant};
-
-use tokio::sync::broadcast::error::TryRecvError;
+use std::time::Instant;
 
 use crate::ratatui_tracing::{
-    widgets::FilterState, widgets::FormatState, Event, EventReceiver, Reloadable,
+    history::History,
+    widgets::{FilterState, FormatState},
+    EventReceiver, Reloadable,
 };
 
 pub struct EventLogState<'a> {
@@ -11,8 +11,7 @@ pub struct EventLogState<'a> {
     event_receiver: EventReceiver,
     pub(crate) filter: FilterState<'a>,
     pub(crate) format: FormatState,
-    pub(crate) log: VecDeque<Event>,
-    max_scrollback: usize,
+    pub(crate) history: History,
 }
 
 impl<'a> EventLogState<'a> {
@@ -22,14 +21,14 @@ impl<'a> EventLogState<'a> {
         reloadable: Reloadable,
     ) -> Self {
         let filter = FilterState::new(reloadable);
+        let history = History::new(max_scrollback);
 
         Self {
             closed: false,
             event_receiver,
             filter,
             format: Default::default(),
-            log: Default::default(),
-            max_scrollback,
+            history,
         }
     }
 
@@ -37,16 +36,8 @@ impl<'a> EventLogState<'a> {
         self.event_receiver.epoch
     }
 
-    pub fn set_max_lines(&mut self, max_lines: usize) {
-        self.max_scrollback = max_lines.saturating_add(10);
-
-        self.trim();
-    }
-
-    pub fn trim(&mut self) {
-        while self.log.len() > self.max_scrollback {
-            self.log.pop_front();
-        }
+    pub fn set_max_events(&mut self, max_events: usize) {
+        self.history.set_capacity(max_events);
     }
 
     /// Move as many items as possible from the channel to the event log
@@ -57,22 +48,8 @@ impl<'a> EventLogState<'a> {
             return;
         }
 
-        loop {
-            match self.event_receiver.try_recv() {
-                Ok(log_line) => self.log.push_back(log_line),
-                Err(TryRecvError::Closed) => {
-                    self.log.push_back(Event::closed());
-                    self.trim();
-                    self.closed = true;
-                    break;
-                }
-                Err(TryRecvError::Empty) => break,
-                Err(TryRecvError::Lagged(count)) => {
-                    self.log.push_back(Event::missed(count));
-                }
-            }
-
-            self.trim();
+        if self.history.fill_from(&mut self.event_receiver).is_err() {
+            self.closed = true;
         }
     }
 }

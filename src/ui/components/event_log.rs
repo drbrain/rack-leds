@@ -69,7 +69,7 @@ impl<'a> EventLog<'a> {
 
 impl Component for EventLog<'_> {
     fn init(&mut self, area: Size) -> Result<()> {
-        self.log.set_max_lines(area.height.into());
+        self.log.set_max_events(area.height.into());
 
         Ok(())
     }
@@ -151,7 +151,7 @@ impl Component for EventLog<'_> {
                 self.log.filter.key(key);
             }
             Action::Resize(_, height) => {
-                self.log.set_max_lines(height.into());
+                self.log.set_max_events(height.into());
             }
             Action::Tick => {
                 self.log.update();

@@ -29,8 +29,8 @@ impl<'a> StatefulWidget for EventLog<'a> {
         let block_inner = block.inner(area);
 
         let text: Vec<Line> = state
-            .log
-            .iter()
+            .history
+            .events(block_inner.height as usize)
             .map(|line| line.to_line(epoch, &state.format))
             .collect();
         let text = Text::from(text);
@@ -47,6 +47,6 @@ impl<'a> StatefulWidget for EventLog<'a> {
 
         let text = text.scroll((line_offset, 0));
 
-        text.render(area, buf)
+        text.render(block_inner, buf)
     }
 }
