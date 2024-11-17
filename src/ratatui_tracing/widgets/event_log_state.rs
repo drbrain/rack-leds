@@ -1,9 +1,8 @@
 use std::time::Instant;
 
 use crate::ratatui_tracing::{
-    history::History,
     widgets::{FilterState, FormatState},
-    EventReceiver, Reloadable,
+    EventReceiver, History, Reloadable,
 };
 
 pub struct EventLogState<'a> {
@@ -11,7 +10,8 @@ pub struct EventLogState<'a> {
     event_receiver: EventReceiver,
     pub(crate) filter: FilterState<'a>,
     pub(crate) format: FormatState,
-    pub(crate) history: History,
+    live_history: History,
+    pause_history: Option<History>,
 }
 
 impl<'a> EventLogState<'a> {
@@ -21,14 +21,15 @@ impl<'a> EventLogState<'a> {
         reloadable: Reloadable,
     ) -> Self {
         let filter = FilterState::new(reloadable);
-        let history = History::new(max_scrollback);
+        let live_history = History::new(max_scrollback);
 
         Self {
             closed: false,
             event_receiver,
             filter,
             format: Default::default(),
-            history,
+            live_history,
+            pause_history: None,
         }
     }
 
@@ -36,8 +37,53 @@ impl<'a> EventLogState<'a> {
         self.event_receiver.epoch
     }
 
+    pub(crate) fn history(&self) -> &History {
+        self.pause_history.as_ref().unwrap_or(&self.live_history)
+    }
+
+    pub fn is_live(&self) -> bool {
+        self.pause_history.is_none()
+    }
+
+    pub fn live(&self) -> &History {
+        &self.live_history
+    }
+
+    pub fn pause_history<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut History),
+    {
+        if self.pause_history.is_none() {
+            self.pause_history = Some(self.live_history.clone());
+        }
+
+        if let Some(ref mut history) = &mut self.pause_history {
+            f(history)
+        }
+    }
+
+    pub fn select_clear(&mut self) {
+        self.pause_history = None;
+    }
+
+    pub fn select_first(&mut self) {
+        self.pause_history(|h| h.select_first());
+    }
+
+    pub fn select_last(&mut self) {
+        self.pause_history(|h| h.select_last());
+    }
+
+    pub fn select_next(&mut self) {
+        self.pause_history(|h| h.select_next());
+    }
+
+    pub fn select_previous(&mut self) {
+        self.pause_history(|h| h.select_previous());
+    }
+
     pub fn set_max_events(&mut self, max_events: usize) {
-        self.history.set_capacity(max_events);
+        self.live_history.set_capacity(max_events);
     }
 
     /// Move as many items as possible from the channel to the event log
@@ -48,7 +94,11 @@ impl<'a> EventLogState<'a> {
             return;
         }
 
-        if self.history.fill_from(&mut self.event_receiver).is_err() {
+        if self
+            .live_history
+            .fill_from(&mut self.event_receiver)
+            .is_err()
+        {
             self.closed = true;
         }
     }

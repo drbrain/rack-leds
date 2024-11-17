@@ -93,6 +93,21 @@ impl Component for EventLog<'_> {
 
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
+            Action::EventLogSelectClear => {
+                self.log.select_clear();
+            }
+            Action::EventLogLast => {
+                self.log.select_last();
+            }
+            Action::EventLogNext => {
+                self.log.select_next();
+            }
+            Action::EventLogPrevious => {
+                self.log.select_previous();
+            }
+            Action::EventLogTop => {
+                self.log.select_first();
+            }
             Action::FilterAdd => {
                 self.log.filter.add_start();
             }

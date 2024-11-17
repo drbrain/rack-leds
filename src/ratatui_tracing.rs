@@ -9,6 +9,7 @@ use std::{env, time::Instant};
 
 pub use event::Event;
 use eyre::Result;
+pub use history::History;
 pub use reloadable::Reloadable;
 pub use scope::Scope;
 pub use to_scope_visitor::ToScopeVisitor;
