@@ -12,6 +12,7 @@ pub type Iter<'a> = iter::Skip<iter::Enumerate<iter::Rev<vec_deque::Iter<'a, Arc
 
 #[derive(Clone)]
 pub struct History {
+    total: usize,
     events: VecDeque<Arc<Event>>,
     capacity: usize,
     pub(crate) selected: Option<usize>,
@@ -22,6 +23,7 @@ impl History {
         let events = VecDeque::with_capacity(capacity);
 
         Self {
+            total: 0,
             events,
             capacity,
             selected: None,
@@ -55,6 +57,8 @@ impl History {
                 }
                 Err(TryRecvError::Empty) => break,
             }
+
+            self.total += 1
         }
 
         Ok(())
@@ -119,5 +123,9 @@ impl History {
                 self.capacity = capacity;
             }
         }
+    }
+
+    pub fn total(&self) -> usize {
+        self.total
     }
 }

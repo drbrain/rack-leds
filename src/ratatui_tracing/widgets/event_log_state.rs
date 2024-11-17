@@ -45,10 +45,6 @@ impl<'a> EventLogState<'a> {
         self.pause_history.is_none()
     }
 
-    pub fn live(&self) -> &History {
-        &self.live_history
-    }
-
     pub fn pause_history<F>(&mut self, f: F)
     where
         F: FnOnce(&mut History),
@@ -84,6 +80,10 @@ impl<'a> EventLogState<'a> {
 
     pub fn set_max_events(&mut self, max_events: usize) {
         self.live_history.set_capacity(max_events);
+    }
+
+    pub fn total(&self) -> usize {
+        self.live_history.total()
     }
 
     /// Move as many items as possible from the channel to the event log
