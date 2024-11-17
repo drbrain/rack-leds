@@ -1,15 +1,22 @@
-use std::marker::PhantomData;
-
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Paragraph, StatefulWidget, Wrap},
+    widgets::{Block, BorderType, Paragraph, StatefulWidget, Wrap},
 };
 
 use crate::ratatui_tracing::widgets::EventLogState;
 
-#[derive(Default)]
 pub struct EventLog<'a> {
-    _data: PhantomData<&'a ()>,
+    block: Block<'a>,
+    title: String,
+}
+
+impl<'a> Default for EventLog<'a> {
+    fn default() -> Self {
+        let block = Block::bordered().border_type(BorderType::Rounded);
+        let title = "Log".to_string();
+
+        Self { block, title }
+    }
 }
 
 impl<'a> StatefulWidget for EventLog<'a> {
@@ -18,7 +25,7 @@ impl<'a> StatefulWidget for EventLog<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let epoch = state.epoch();
 
-        let block = Block::new().title("Log").borders(Borders::ALL);
+        let block = self.block.clone().title(self.title);
         let block_inner = block.inner(area);
 
         let text: Vec<Line> = state
