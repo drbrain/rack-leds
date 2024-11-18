@@ -28,7 +28,7 @@ pub struct EventLog<'a> {
 
 impl<'a> EventLog<'a> {
     pub fn new(events: EventReceiver, reloadable: Reloadable) -> Self {
-        let log = EventLogState::new(events, 50, reloadable);
+        let log = EventLogState::new(events, 1000, reloadable);
 
         Self {
             log,
