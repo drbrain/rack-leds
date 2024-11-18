@@ -133,14 +133,14 @@ impl Event {
             line.push_span(Span::raw(" "));
         }
 
-        if format.display_level {
+        if format.display_level() {
             self.add_level(&mut line);
             line.push_span(Span::raw(" "));
         };
 
         self.add_scopes(&mut line, format);
 
-        if format.display_target {
+        if format.display_target() {
             self.add_target(&mut line);
         }
 
@@ -307,7 +307,7 @@ impl Event {
 fn add_scope<'a>(line: &mut Line<'a>, scope: &'a Scope, format: &FormatState) {
     line.push_span(Span::styled(scope.name(), BOLD));
 
-    if format.display_scope_fields {
+    if format.display_scope_fields() {
         line.push_span(Span::styled("{", BOLD));
 
         scope

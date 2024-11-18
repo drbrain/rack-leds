@@ -8,10 +8,10 @@ use crate::LOCAL_OFFSET;
 #[derive(Clone)]
 pub struct FormatState {
     pub(crate) local_offset: UtcOffset,
-    pub(crate) display_level: bool,
+    display_level: ShowHide,
     pub(crate) display_scope: ScopeDisplay,
-    pub(crate) display_scope_fields: bool,
-    pub(crate) display_target: bool,
+    display_scope_fields: ShowHide,
+    display_target: ShowHide,
     pub(crate) table: TableState,
     pub(crate) time: TimeFormat,
     wrap: OnOff,
@@ -21,12 +21,24 @@ impl FormatState {
     pub fn as_rows(&self) -> Vec<(&'static str, &'static str)> {
         vec![
             ("Time", self.time.into()),
-            ("Level", visibility(self.display_level)),
+            ("Level", self.display_level.into()),
             ("Scope Display", self.display_scope.into()),
-            ("Scope Fields", visibility(self.display_scope_fields)),
-            ("Target", visibility(self.display_target)),
+            ("Scope Fields", self.display_scope_fields.into()),
+            ("Target", self.display_target.into()),
             ("Wrap", self.wrap.into()),
         ]
+    }
+
+    pub fn display_target(&self) -> bool {
+        self.display_target == ShowHide::Show
+    }
+
+    pub fn display_scope_fields(&self) -> bool {
+        self.display_scope_fields == ShowHide::Show
+    }
+
+    pub fn display_level(&self) -> bool {
+        self.display_level == ShowHide::Show
     }
 
     pub fn row_last(&mut self) {
@@ -45,16 +57,16 @@ impl FormatState {
                 self.time = self.time.next();
             }
             1 => {
-                self.display_level = !self.display_level;
+                self.display_level = self.display_level.next();
             }
             2 => {
                 self.display_scope = self.display_scope.next();
             }
             3 => {
-                self.display_scope_fields = !self.display_scope_fields;
+                self.display_scope_fields = self.display_scope_fields.next();
             }
             4 => {
-                self.display_target = !self.display_target;
+                self.display_target = self.display_target.next();
             }
             5 => {
                 self.wrap = self.wrap.next();
@@ -86,20 +98,21 @@ impl Default for FormatState {
         let table = TableState::new().with_selected_cell((0, 1));
 
         Self {
-            display_level: true,
+            display_level: Default::default(),
             display_scope: Default::default(),
-            display_scope_fields: true,
-            display_target: true,
+            display_scope_fields: Default::default(),
+            display_target: Default::default(),
             local_offset,
             table,
             time: Default::default(),
-            wrap: OnOff::On,
+            wrap: Default::default(),
         }
     }
 }
 
-#[derive(Clone, Copy, strum::IntoStaticStr, PartialEq)]
+#[derive(Clone, Copy, Default, strum::IntoStaticStr, PartialEq)]
 enum OnOff {
+    #[default]
     On,
     Off,
 }
@@ -113,10 +126,18 @@ impl OnOff {
     }
 }
 
-fn visibility(visible: bool) -> &'static str {
-    if visible {
-        "Show"
-    } else {
-        "Hide"
+#[derive(Clone, Copy, Default, strum::IntoStaticStr, PartialEq)]
+enum ShowHide {
+    #[default]
+    Show,
+    Hide,
+}
+
+impl ShowHide {
+    fn next(&self) -> ShowHide {
+        match self {
+            ShowHide::Show => ShowHide::Hide,
+            ShowHide::Hide => ShowHide::Show,
+        }
     }
 }
