@@ -105,7 +105,7 @@ fn log_layer() -> (
     Arc<AtomicBool>,
     EventReceiver,
     Reloadable,
-    Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync>,
+    Box<dyn Layer<Registry> + Send + Sync>,
 ) {
     let (filter, reloadable) = log_filter();
 
@@ -138,9 +138,7 @@ fn log_filter() -> (reload::Layer<EnvFilter, Registry>, Reloadable) {
 }
 
 /// Log to stdout when gui_active is false
-fn stdout_layer(
-    gui_active: &Arc<AtomicBool>,
-) -> Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync> {
+fn stdout_layer(gui_active: &Arc<AtomicBool>) -> Box<dyn Layer<Registry> + Send + Sync> {
     let stdout = fmt::layer()
         .with_ansi(std::io::stdout().is_terminal())
         .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"));
@@ -157,10 +155,7 @@ fn stdout_layer(
 /// Log to ratatui if gui_active is true
 fn ratatui_layer(
     gui_active: &Arc<AtomicBool>,
-) -> (
-    EventReceiver,
-    Box<dyn Layer<tracing_subscriber::Registry> + Send + Sync>,
-) {
+) -> (EventReceiver, Box<dyn Layer<Registry> + Send + Sync>) {
     let tui = RatatuiTracing::new();
     let reader = tui.subscribe();
     let tui_gui_active = gui_active.clone();
