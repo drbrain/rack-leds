@@ -273,6 +273,10 @@ impl Event {
     }
 
     fn add_scopes<'a>(&'a self, line: &mut Line<'a>, format: &FormatState) {
+        if self.scopes.is_empty() {
+            return;
+        }
+
         match format.display_scope {
             ScopeDisplay::All => {
                 self.scopes.iter().for_each(|scope| {
