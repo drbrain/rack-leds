@@ -121,6 +121,10 @@ impl Event {
         }
     }
 
+    pub fn have_message_and_fields(&self) -> bool {
+        self.fields.contains_key("message") && !self.fields.len() > 1
+    }
+
     pub fn message(&self) -> Option<String> {
         self.fields.get("message").cloned()
     }
@@ -167,46 +171,40 @@ impl Event {
             };
 
             line.push_span(Span::raw(rfc3339));
-            line.push_span(" (");
+            line.push_span(Span::styled(" (", DIM));
             line.push_span(Span::raw(
                 TimeFormat::Uptime
                     .format(self, epoch, format.local_offset)
                     .unwrap(),
             ));
-            line.push_span(Span::raw(") "));
+            line.push_span(Span::styled(") ", DIM));
 
             self.add_level(&mut line);
             line.push_span(Span::raw(" "));
-            self.add_target(&mut line);
 
             lines.push(line);
         }
+
+        lines.push(Line::default());
 
         {
             let mut line = Line::default();
-            line.push_span(Span::raw("  "));
-            if let Some(message) = self.message() {
-                line.push_span(Span::raw(message));
-            }
-            self.add_fields(&mut line);
+            line.push_span(Span::raw(self.target.clone()));
 
-            lines.push(line);
-        }
+            if self.file.is_some() || self.line.is_some() {
+                line.push_span(Span::styled(" at ", DIM_ITALIC));
 
-        if self.file.is_some() || self.line.is_some() {
-            let mut line = Line::default();
-            line.push_span(Span::styled("  at ", DIM_ITALIC));
+                let file = self
+                    .file
+                    .clone()
+                    .map(|file| Span::styled(file, BOLD))
+                    .unwrap_or_else(|| Span::styled("[unknown]", ITALIC));
+                line.push_span(file);
 
-            let file = self
-                .file
-                .clone()
-                .map(Span::raw)
-                .unwrap_or_else(|| Span::styled("[unknown]", ITALIC));
-            line.push_span(file);
-
-            if let Some(line_number) = self.line {
-                line.push_span(Span::styled(":", DIM));
-                line.push_span(Span::raw(format!("{line_number}")));
+                if let Some(line_number) = self.line {
+                    line.push_span(Span::styled(":", DIM));
+                    line.push_span(Span::styled(format!("{line_number}"), BOLD));
+                }
             }
 
             lines.push(line);
@@ -214,8 +212,8 @@ impl Event {
 
         self.scopes.iter().for_each(|scope| {
             let mut line = Line::default();
-            line.push_span(Span::styled("  in ", DIM_ITALIC));
-            line.push_span(Span::raw(scope.name()));
+            line.push_span(Span::styled("in ", DIM_ITALIC));
+            line.push_span(Span::styled(scope.name(), BOLD));
 
             if !scope.is_empty() {
                 line.push_span(Span::styled(" with ", DIM_ITALIC));
@@ -225,17 +223,52 @@ impl Event {
                     .sorted_by_cached_key(|(field, _)| *field)
                     .enumerate()
                     .for_each(|(index, (field, value))| {
-                        line.push_span(Span::raw(*field));
-                        line.push_span(Span::styled(": ", DIM));
+                        line.push_span(Span::styled(*field, ITALIC));
+                        line.push_span(Span::styled(": ", DIM_ITALIC));
                         line.push_span(Span::raw(value));
                         if index != scope.len() - 1 {
-                            line.push_span(Span::raw(" "));
+                            line.push_span(Span::styled(", ", DIM));
                         }
                     });
             }
 
             lines.push(line);
         });
+
+        if !self.scopes.is_empty() {
+            lines.push(Line::default());
+        }
+
+        {
+            lines.push(Line::default());
+
+            let mut line = Line::default();
+
+            if let Some(message) = self.message() {
+                line.push_span(Span::raw(message));
+            }
+
+            if self.have_message_and_fields() {
+                line.push_span(Span::styled(", ", DIM));
+            }
+
+            self.fields
+                .iter()
+                .filter(|(k, _)| *k != &"message")
+                .sorted_by_cached_key(|(name, _)| *name)
+                .enumerate()
+                .for_each(|(index, (name, value))| {
+                    line.push_span(Span::styled(*name, ITALIC));
+                    line.push_span(Span::styled(": ", DIM_ITALIC));
+                    line.push_span(Span::raw(value));
+
+                    if index != self.fields.len() - 1 {
+                        line.push_span(Span::raw(" "));
+                    }
+                });
+
+            lines.push(line);
+        }
 
         Paragraph::new(lines).wrap(Wrap { trim: false })
     }
