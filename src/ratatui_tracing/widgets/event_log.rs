@@ -3,7 +3,7 @@ use ratatui::{
     widgets::{Block, BorderType, Paragraph, StatefulWidget, Wrap},
 };
 
-use crate::ratatui_tracing::widgets::EventLogState;
+use crate::ratatui_tracing::{widgets::EventLogState, Event};
 
 pub struct EventLog<'a> {
     block: Block<'a>,
@@ -38,11 +38,12 @@ impl<'a> StatefulWidget for EventLog<'a> {
     type State = EventLogState<'a>;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let this = &self;
         let history = state.history();
         let total = state.total();
 
-        let status = if state.is_live() {
-            Line::from(format!("{total} events, live")).style(self.status_live_style)
+        let event_title = if state.is_live() {
+            Line::from(format!("{total} events")).style(this.status_live_style)
         } else {
             let snapshot_total = history.total();
 
@@ -59,48 +60,74 @@ impl<'a> StatefulWidget for EventLog<'a> {
                 history.offset(),
                 history.len()
             ))
-            .style(self.status_paused_style)
+            .style(this.status_paused_style)
         };
 
-        let block = self
+        let status_title = if state.is_live() {
+            Line::from("Live").style(this.status_live_style)
+        } else {
+            Line::from("PAUSED").style(this.status_paused_style)
+        };
+
+        let block = this
             .block
             .clone()
-            .title(Line::from(self.title).style(self.title_style))
-            .title(status.right_aligned());
+            .title(Line::from(this.title.clone()).style(this.title_style))
+            .title(status_title.centered())
+            .title(event_title.right_aligned());
 
         let log_area = block.inner(area);
         block.render(area, buf);
 
-        let mut current_height = 0;
-
-        let events = state.history().events().map(|(i, event)| {
-            let line = event.to_line(state.epoch(), &state.format);
-
-            let paragraph = Paragraph::new(line).wrap(Wrap { trim: true });
-            (i, paragraph)
-        });
+        let mut events = state.history().events();
 
         let selected = state.history().selected;
+        let epoch = state.epoch();
 
-        for (i, event) in events {
-            let height = event.line_count(log_area.width) as u16;
-            current_height += height;
+        if state.is_detail() {
+            let selected = selected.unwrap_or(0);
 
-            if current_height >= log_area.height {
-                break;
-            }
+            let event = events
+                .find_map(|(i, event)| {
+                    if i == selected {
+                        Some(event.clone())
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| Event::dropped(selected, total).into());
 
-            let event_area = Rect {
-                x: log_area.left(),
-                y: log_area.bottom() - current_height,
-                width: log_area.width,
-                height,
-            };
+            event.to_pretty(epoch, &state.format).render(log_area, buf);
+        } else {
+            let events = events.map(|(i, event)| {
+                let line = event.to_line(epoch, &state.format);
 
-            event.render(event_area, buf);
+                let paragraph = Paragraph::new(line).wrap(Wrap { trim: true });
+                (i, paragraph)
+            });
 
-            if selected.map_or(false, |s| s == i) {
-                buf.set_style(event_area, self.highlight_style);
+            let mut current_height = 0;
+
+            for (i, event) in events {
+                let height = event.line_count(log_area.width) as u16;
+                current_height += height;
+
+                if current_height >= log_area.height {
+                    break;
+                }
+
+                let event_area = Rect {
+                    x: log_area.left(),
+                    y: log_area.bottom() - current_height,
+                    width: log_area.width,
+                    height,
+                };
+
+                event.render(event_area, buf);
+
+                if selected.map_or(false, |s| s == i) {
+                    buf.set_style(event_area, self.highlight_style);
+                }
             }
         }
     }

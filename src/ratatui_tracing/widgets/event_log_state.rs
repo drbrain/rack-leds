@@ -7,6 +7,7 @@ use crate::ratatui_tracing::{
 
 pub struct EventLogState<'a> {
     closed: bool,
+    detail: bool,
     event_receiver: EventReceiver,
     pub(crate) filter: FilterState<'a>,
     pub(crate) format: FormatState,
@@ -25,11 +26,20 @@ impl<'a> EventLogState<'a> {
 
         Self {
             closed: false,
+            detail: false,
             event_receiver,
             filter,
             format: Default::default(),
             live_history,
             pause_history: None,
+        }
+    }
+
+    pub fn detail_show(&mut self) {
+        self.detail = true;
+
+        if self.is_live() {
+            self.select_last();
         }
     }
 
@@ -41,8 +51,16 @@ impl<'a> EventLogState<'a> {
         self.pause_history.as_ref().unwrap_or(&self.live_history)
     }
 
+    pub fn is_detail(&self) -> bool {
+        self.detail
+    }
+
     pub fn is_live(&self) -> bool {
         self.pause_history.is_none()
+    }
+
+    pub fn list_show(&mut self) {
+        self.detail = false;
     }
 
     pub fn pause_history<F>(&mut self, f: F)

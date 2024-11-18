@@ -6,10 +6,12 @@ use strum::Display;
 pub enum Action {
     ClearScreen,
     Error(String),
-    EventLogSelectClear,
+    EventLogDetailShow,
     EventLogLast,
+    EventLogListShow,
     EventLogNext,
     EventLogPrevious,
+    EventLogSelectClear,
     EventLogTop,
     FilterAdd,
     FilterCancel,

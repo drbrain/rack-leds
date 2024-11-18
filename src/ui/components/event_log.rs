@@ -93,11 +93,17 @@ impl Component for EventLog<'_> {
 
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
+            Action::EventLogDetailShow => {
+                self.log.detail_show();
+            }
             Action::EventLogSelectClear => {
                 self.log.select_clear();
             }
             Action::EventLogLast => {
                 self.log.select_last();
+            }
+            Action::EventLogListShow => {
+                self.log.list_show();
             }
             Action::EventLogNext => {
                 self.log.select_next();

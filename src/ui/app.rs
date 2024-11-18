@@ -38,6 +38,7 @@ pub struct App {
 pub enum Mode {
     #[default]
     Home,
+    EventLogDetail,
     Filter,
     FilterEdit,
     FilterSubmit,
@@ -197,6 +198,14 @@ impl App {
 
             match action {
                 Action::ClearScreen => tui.terminal.clear()?,
+                Action::EventLogDetailShow => {
+                    self.mode = Mode::EventLogDetail;
+                    debug!(mode = ?self.mode, "mode switched");
+                }
+                Action::EventLogListShow => {
+                    self.mode = Mode::Home;
+                    debug!(mode = ?self.mode, "mode switched");
+                }
                 Action::FilterAdd | Action::FilterEdit => {
                     self.mode = Mode::FilterEdit;
                     debug!(mode = ?self.mode, "mode switched");

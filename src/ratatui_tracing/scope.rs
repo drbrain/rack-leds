@@ -19,6 +19,10 @@ impl Scope {
         self.fields.iter()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
+    }
+
     pub fn len(&self) -> usize {
         self.fields.len()
     }

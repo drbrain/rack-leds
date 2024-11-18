@@ -4,6 +4,7 @@ use itertools::Itertools;
 use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
+    widgets::{Paragraph, Wrap},
 };
 use time::OffsetDateTime;
 use tracing::{Level, Subscriber};
@@ -11,7 +12,7 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 use crate::ratatui_tracing::{Scope, ToScopeVisitor};
 
-use super::widgets::{FormatState, ScopeDisplay};
+use super::widgets::{FormatState, ScopeDisplay, TimeFormat};
 
 #[derive(Clone)]
 pub struct Event {
@@ -32,6 +33,22 @@ impl Event {
             target: "tracing event channel closed".into(),
             level: Level::WARN,
             fields: Default::default(),
+        }
+    }
+
+    pub fn dropped(selected: usize, total: usize) -> Self {
+        let fields = HashMap::from([
+            ("selected", format!("{selected}")),
+            ("total", format!("{total}")),
+        ]);
+
+        Self {
+            recorded: Instant::now(),
+            recorded_date_time: OffsetDateTime::now_utc(),
+            scopes: Default::default(),
+            target: "tracing event dropped".into(),
+            level: Level::WARN,
+            fields,
         }
     }
 
@@ -110,7 +127,7 @@ impl Event {
             line.push_span(Span::raw(" "));
         };
 
-        self.add_scopes(&mut line, &format);
+        self.add_scopes(&mut line, format);
 
         if format.display_target {
             self.add_target(&mut line);
@@ -121,6 +138,76 @@ impl Event {
         self.add_fields(&mut line);
 
         line
+    }
+
+    pub fn to_pretty(&self, epoch: Instant, format: &FormatState) -> Paragraph<'_> {
+        let mut lines = vec![];
+
+        {
+            let mut line = Line::default();
+            let rfc3339 = if let TimeFormat::Rfc3339Local = format.time {
+                TimeFormat::Rfc3339Local
+                    .format(self, epoch, format.local_offset)
+                    .unwrap()
+            } else {
+                TimeFormat::Rfc3339Utc
+                    .format(self, epoch, format.local_offset)
+                    .unwrap()
+            };
+
+            line.push_span(Span::raw(rfc3339));
+            line.push_span(" (");
+            line.push_span(Span::raw(
+                TimeFormat::Uptime
+                    .format(self, epoch, format.local_offset)
+                    .unwrap(),
+            ));
+            line.push_span(Span::raw(") "));
+
+            self.add_level(&mut line);
+            line.push_span(Span::raw(" "));
+            self.add_target(&mut line);
+
+            lines.push(line);
+        }
+
+        {
+            let mut line = Line::default();
+            line.push_span(Span::raw("  "));
+            if let Some(message) = self.message() {
+                line.push_span(Span::raw(message));
+            }
+            self.add_fields(&mut line);
+
+            lines.push(line);
+        }
+
+        self.scopes.iter().for_each(|scope| {
+            let mut line = Line::default();
+            line.push_span(Span::styled("  in ", DIM_ITALIC));
+            line.push_span(Span::raw(scope.name()));
+
+            if !scope.is_empty() {
+                line.push_span(Span::styled(" with ", DIM_ITALIC));
+
+                scope
+                    .fields()
+                    .sorted_by_cached_key(|(field, _)| *field)
+                    .enumerate()
+                    .for_each(|(index, (field, value))| {
+                        line.push_span(Span::raw(*field));
+                        line.push_span(Span::styled(": ", DIM));
+                        line.push_span(Span::raw(value));
+                        if index != scope.len() - 1 {
+                            line.push_span(Span::raw(" "));
+                        }
+                    });
+            }
+
+            lines.push(line);
+        });
+
+        Paragraph::new(lines).wrap(Wrap { trim: false })
     }
 
     fn add_fields<'a>(&'a self, line: &mut Line<'a>) {
@@ -219,5 +306,8 @@ const DEBUG_STYLE: Style = Style::new().fg(Color::Blue);
 const TRACE_STYLE: Style = Style::new().fg(Color::Cyan);
 
 const DIM: Style = Style::new().add_modifier(Modifier::DIM);
+const DIM_ITALIC: Style = Style::new()
+    .add_modifier(Modifier::DIM)
+    .add_modifier(Modifier::ITALIC);
 const BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
 const ITALIC: Style = Style::new().add_modifier(Modifier::ITALIC);
