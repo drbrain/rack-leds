@@ -18,6 +18,7 @@ pub enum Action {
     EventLogScrollRightBig,
     EventLogSelectClear,
     EventLogTop,
+    EventLogWrapToggle,
     FilterAdd,
     FilterCancel,
     FilterDelete,

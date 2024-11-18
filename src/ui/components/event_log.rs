@@ -129,6 +129,9 @@ impl Component for EventLog<'_> {
             Action::EventLogTop => {
                 self.log.select_first();
             }
+            Action::EventLogWrapToggle => {
+                self.log.wrap_toggle();
+            }
             Action::FilterAdd => {
                 self.log.filter.add_start();
             }

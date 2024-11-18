@@ -90,6 +90,10 @@ impl FormatState {
     pub fn wrap(&self) -> bool {
         self.wrap == OnOff::On
     }
+
+    pub fn wrap_toggle(&mut self) {
+        self.wrap = self.wrap.next();
+    }
 }
 
 impl Default for FormatState {

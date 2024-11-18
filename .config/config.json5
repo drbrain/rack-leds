@@ -19,6 +19,7 @@
       "<q>": "Quit",
       "<Right>": "EventLogScrollRight",
       "<Up>": "EventLogPrevious",
+      "<w>": "EventLogWrapToggle",
     },
     "EventLogDetail": {
       "<Ctrl-c>": "Quit",

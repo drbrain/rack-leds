@@ -155,4 +155,8 @@ impl<'a> EventLogState<'a> {
             self.closed = true;
         }
     }
+
+    pub fn wrap_toggle(&mut self) {
+        self.format.wrap_toggle();
+    }
 }
