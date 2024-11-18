@@ -4,6 +4,7 @@ use std::{
     sync::Arc,
 };
 
+use ratatui::widgets::ScrollbarState;
 use tokio::sync::broadcast::error::TryRecvError;
 
 use crate::ratatui_tracing::{Event, EventReceiver};
@@ -127,5 +128,14 @@ impl History {
 
     pub fn total(&self) -> usize {
         self.total
+    }
+}
+
+impl From<&History> for ScrollbarState {
+    fn from(history: &History) -> Self {
+        let content_length = history.len();
+        let position = content_length.saturating_sub(history.offset());
+
+        ScrollbarState::new(content_length).position(position)
     }
 }

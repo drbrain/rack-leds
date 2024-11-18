@@ -1,3 +1,5 @@
+use std::convert::Into;
+
 use ratatui::{
     prelude::*,
     widgets::{Block, BorderType, Paragraph, Scrollbar, ScrollbarState, StatefulWidget, Wrap},
@@ -79,6 +81,8 @@ impl<'a> StatefulWidget for EventLog<'a> {
         let log_area = block.inner(area);
         block.render(area, buf);
 
+        let (log_area, scroll_area_vertical) = state.scroll_area_vertical(log_area);
+
         let mut events = state.history().events();
 
         let selected = state.history().selected;
@@ -101,12 +105,14 @@ impl<'a> StatefulWidget for EventLog<'a> {
         } else {
             let events = events.map(|(i, event)| (i, event.to_line(epoch, &state.format)));
 
-            let (log_area, scroll_area) = state.scroll_area(log_area);
+            let (log_area, scroll_area_horizontal) = state.scroll_area_horizontal(log_area);
 
             let mut current_height = 0;
             let mut max_width = 0;
+            let mut visible = 0;
 
             for (i, event) in events {
+                visible += 1;
                 max_width = max_width.max(event.width());
 
                 let event = Paragraph::new(event);
@@ -152,7 +158,16 @@ impl<'a> StatefulWidget for EventLog<'a> {
                 }
             }
 
-            if let Some(scroll_area) = scroll_area {
+            if let Some(scroll_area) = scroll_area_vertical {
+                let mut scroll_bar_state =
+                    Into::<ScrollbarState>::into(state.history()).viewport_content_length(visible);
+
+                Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight)
+                    .symbols(ratatui::symbols::scrollbar::VERTICAL)
+                    .render(scroll_area, buf, &mut scroll_bar_state);
+            }
+
+            if let Some(scroll_area) = scroll_area_horizontal {
                 let mut scroll_bar_state =
                     ScrollbarState::new(max_width).position(state.horizontal_offset as usize);
 

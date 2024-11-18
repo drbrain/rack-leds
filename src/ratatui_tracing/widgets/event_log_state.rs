@@ -80,7 +80,7 @@ impl<'a> EventLogState<'a> {
         }
     }
 
-    pub fn scroll_area(&self, area: Rect) -> (Rect, Option<Rect>) {
+    pub fn scroll_area_horizontal(&self, area: Rect) -> (Rect, Option<Rect>) {
         if self.format.wrap() || self.horizontal_offset == 0 {
             (area, None)
         } else {
@@ -91,6 +91,16 @@ impl<'a> EventLogState<'a> {
         }
     }
 
+    pub fn scroll_area_vertical(&self, area: Rect) -> (Rect, Option<Rect>) {
+        if self.is_live() {
+            (area, None)
+        } else {
+            let [area, scroll_area] =
+                Layout::horizontal([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
+
+            (area, Some(scroll_area))
+        }
+    }
     pub fn scroll_left(&mut self) {
         self.horizontal_offset = self.horizontal_offset.saturating_sub(1);
     }
