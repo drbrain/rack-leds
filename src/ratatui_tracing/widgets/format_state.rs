@@ -14,6 +14,7 @@ pub struct FormatState {
     pub(crate) display_target: bool,
     pub(crate) table: TableState,
     pub(crate) time: TimeFormat,
+    wrap: OnOff,
 }
 
 impl FormatState {
@@ -24,6 +25,7 @@ impl FormatState {
             ("Scope Display", self.display_scope.into()),
             ("Scope Fields", visibility(self.display_scope_fields)),
             ("Target", visibility(self.display_target)),
+            ("Wrap", self.wrap.into()),
         ]
     }
 
@@ -54,6 +56,9 @@ impl FormatState {
             4 => {
                 self.display_target = !self.display_target;
             }
+            5 => {
+                self.wrap = self.wrap.next();
+            }
             _ => (),
         }
     }
@@ -68,6 +73,10 @@ impl FormatState {
 
     pub fn row_previous(&mut self) {
         self.table.select_previous()
+    }
+
+    pub fn wrap(&self) -> bool {
+        self.wrap == OnOff::On
     }
 }
 
@@ -84,6 +93,22 @@ impl Default for FormatState {
             local_offset,
             table,
             time: Default::default(),
+            wrap: OnOff::On,
+        }
+    }
+}
+
+#[derive(Clone, Copy, strum::IntoStaticStr, PartialEq)]
+enum OnOff {
+    On,
+    Off,
+}
+
+impl OnOff {
+    fn next(&self) -> OnOff {
+        match self {
+            OnOff::On => OnOff::Off,
+            OnOff::Off => OnOff::On,
         }
     }
 }

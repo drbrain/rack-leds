@@ -102,8 +102,13 @@ impl<'a> StatefulWidget for EventLog<'a> {
             let events = events.map(|(i, event)| {
                 let line = event.to_line(epoch, &state.format);
 
-                let paragraph = Paragraph::new(line).wrap(Wrap { trim: true });
-                (i, paragraph)
+                let paragraph = Paragraph::new(line);
+
+                if state.format.wrap() {
+                    (i, paragraph.wrap(Wrap { trim: false }))
+                } else {
+                    (i, paragraph)
+                }
             });
 
             let mut current_height = 0;
