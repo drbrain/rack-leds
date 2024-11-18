@@ -109,12 +109,20 @@ impl<'a> StatefulWidget for EventLog<'a> {
             let mut current_height = 0;
 
             for (i, event) in events {
+                let mut truncate = false;
+                let remaining_height = log_area.height.saturating_sub(current_height);
                 let height = event.line_count(log_area.width) as u16;
-                current_height += height;
 
-                if current_height >= log_area.height {
+                let height = if remaining_height == 0 {
                     break;
-                }
+                } else if remaining_height < height {
+                    truncate = true;
+                    current_height += remaining_height;
+                    remaining_height
+                } else {
+                    current_height += height;
+                    height
+                };
 
                 let event_area = Rect {
                     x: log_area.left(),
@@ -125,10 +133,29 @@ impl<'a> StatefulWidget for EventLog<'a> {
 
                 event.render(event_area, buf);
 
+                if truncate {
+                    add_truncate(event_area, buf);
+
+                    break;
+                }
+
                 if selected.map_or(false, |s| s == i) {
                     buf.set_style(event_area, self.highlight_style);
                 }
             }
         }
     }
+}
+
+fn add_truncate(area: Rect, buf: &mut Buffer) {
+    let truncated = Line::from("[truncated]")
+        .right_aligned()
+        .style(Style::default().dim().italic().bg(Color::DarkGray));
+    let [_, last_line] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
+    let [_, truncated_area] = Layout::horizontal([
+        Constraint::Fill(1),
+        Constraint::Length(truncated.width().try_into().unwrap_or(11)),
+    ])
+    .areas(last_line);
+    truncated.render(truncated_area, buf);
 }

@@ -22,6 +22,8 @@ pub struct Event {
     target: String,
     level: Level,
     fields: HashMap<&'static str, String>,
+    file: Option<String>,
+    line: Option<u32>,
 }
 
 impl Event {
@@ -33,6 +35,8 @@ impl Event {
             target: "tracing event channel closed".into(),
             level: Level::WARN,
             fields: Default::default(),
+            file: None,
+            line: None,
         }
     }
 
@@ -49,6 +53,8 @@ impl Event {
             target: "tracing event dropped".into(),
             level: Level::WARN,
             fields,
+            file: None,
+            line: None,
         }
     }
 
@@ -62,6 +68,8 @@ impl Event {
             target: "tracing events missed".into(),
             level: Level::WARN,
             fields,
+            file: None,
+            line: None,
         }
     }
 
@@ -81,6 +89,7 @@ impl Event {
         let metadata = event.metadata();
 
         let mut scopes = vec![];
+
         if let Some(mut span) = context.event_span(event) {
             loop {
                 {
@@ -107,6 +116,8 @@ impl Event {
             target: metadata.target().to_string(),
             level: *metadata.level(),
             fields,
+            file: metadata.file().map(|f| f.into()),
+            line: metadata.line(),
         }
     }
 
@@ -178,6 +189,25 @@ impl Event {
                 line.push_span(Span::raw(message));
             }
             self.add_fields(&mut line);
+
+            lines.push(line);
+        }
+
+        if self.file.is_some() || self.line.is_some() {
+            let mut line = Line::default();
+            line.push_span(Span::styled("  at ", DIM_ITALIC));
+
+            let file = self
+                .file
+                .clone()
+                .map(Span::raw)
+                .unwrap_or_else(|| Span::styled("[unknown]", ITALIC));
+            line.push_span(file);
+
+            if let Some(line_number) = self.line {
+                line.push_span(Span::styled(":", DIM));
+                line.push_span(Span::raw(format!("{line_number}")));
+            }
 
             lines.push(line);
         }
