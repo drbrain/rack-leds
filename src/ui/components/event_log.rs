@@ -111,6 +111,21 @@ impl Component for EventLog<'_> {
             Action::EventLogPrevious => {
                 self.log.select_previous();
             }
+            Action::EventLogScrollLeft => {
+                self.log.scroll_left();
+            }
+            Action::EventLogScrollLeftBig => {
+                self.log.scroll_left_big();
+            }
+            Action::EventLogScrollReset => {
+                self.log.scroll_reset();
+            }
+            Action::EventLogScrollRight => {
+                self.log.scroll_right();
+            }
+            Action::EventLogScrollRightBig => {
+                self.log.scroll_right_big();
+            }
             Action::EventLogTop => {
                 self.log.select_first();
             }

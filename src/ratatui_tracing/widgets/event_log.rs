@@ -1,6 +1,6 @@
 use ratatui::{
     prelude::*,
-    widgets::{Block, BorderType, Paragraph, StatefulWidget, Wrap},
+    widgets::{Block, BorderType, Paragraph, Scrollbar, ScrollbarState, StatefulWidget, Wrap},
 };
 
 use crate::ratatui_tracing::{widgets::EventLogState, Event};
@@ -99,21 +99,24 @@ impl<'a> StatefulWidget for EventLog<'a> {
 
             event.to_pretty(epoch, &state.format).render(log_area, buf);
         } else {
-            let events = events.map(|(i, event)| {
-                let line = event.to_line(epoch, &state.format);
+            let events = events.map(|(i, event)| (i, event.to_line(epoch, &state.format)));
 
-                let paragraph = Paragraph::new(line);
-
-                if state.format.wrap() {
-                    (i, paragraph.wrap(Wrap { trim: false }))
-                } else {
-                    (i, paragraph)
-                }
-            });
+            let (log_area, scroll_area) = state.scroll_area(log_area);
 
             let mut current_height = 0;
+            let mut max_width = 0;
 
             for (i, event) in events {
+                max_width = max_width.max(event.width());
+
+                let event = Paragraph::new(event);
+
+                let event = if state.format.wrap() {
+                    event.wrap(Wrap { trim: false })
+                } else {
+                    event.scroll((0, state.horizontal_offset))
+                };
+
                 let mut truncate = false;
                 let remaining_height = log_area.height.saturating_sub(current_height);
                 let height = event.line_count(log_area.width) as u16;
@@ -147,6 +150,15 @@ impl<'a> StatefulWidget for EventLog<'a> {
                 if selected.map_or(false, |s| s == i) {
                     buf.set_style(event_area, self.highlight_style);
                 }
+            }
+
+            if let Some(scroll_area) = scroll_area {
+                let mut scroll_bar_state =
+                    ScrollbarState::new(max_width).position(state.horizontal_offset as usize);
+
+                Scrollbar::new(ratatui::widgets::ScrollbarOrientation::HorizontalBottom)
+                    .symbols(ratatui::symbols::scrollbar::HORIZONTAL)
+                    .render(scroll_area, buf, &mut scroll_bar_state);
             }
         }
     }

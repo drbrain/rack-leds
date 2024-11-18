@@ -1,5 +1,7 @@
 use std::time::Instant;
 
+use ratatui::layout::{Constraint, Layout, Rect};
+
 use crate::ratatui_tracing::{
     widgets::{FilterState, FormatState},
     EventReceiver, History, Reloadable,
@@ -11,6 +13,7 @@ pub struct EventLogState<'a> {
     event_receiver: EventReceiver,
     pub(crate) filter: FilterState<'a>,
     pub(crate) format: FormatState,
+    pub(crate) horizontal_offset: u16,
     live_history: History,
     pause_history: Option<History>,
 }
@@ -30,6 +33,7 @@ impl<'a> EventLogState<'a> {
             event_receiver,
             filter,
             format: Default::default(),
+            horizontal_offset: 0,
             live_history,
             pause_history: None,
         }
@@ -74,6 +78,37 @@ impl<'a> EventLogState<'a> {
         if let Some(ref mut history) = &mut self.pause_history {
             f(history)
         }
+    }
+
+    pub fn scroll_area(&self, area: Rect) -> (Rect, Option<Rect>) {
+        if self.format.wrap() {
+            (area, None)
+        } else {
+            let [area, scroll_area] =
+                Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
+
+            (area, Some(scroll_area))
+        }
+    }
+
+    pub fn scroll_left(&mut self) {
+        self.horizontal_offset = self.horizontal_offset.saturating_sub(1);
+    }
+
+    pub fn scroll_left_big(&mut self) {
+        self.horizontal_offset = self.horizontal_offset.saturating_sub(10);
+    }
+
+    pub fn scroll_reset(&mut self) {
+        self.horizontal_offset = 0;
+    }
+
+    pub fn scroll_right(&mut self) {
+        self.horizontal_offset = self.horizontal_offset.saturating_add(1);
+    }
+
+    pub fn scroll_right_big(&mut self) {
+        self.horizontal_offset = self.horizontal_offset.saturating_add(10);
     }
 
     pub fn select_clear(&mut self) {
