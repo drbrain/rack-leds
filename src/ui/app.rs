@@ -199,28 +199,19 @@ impl App {
             match action {
                 Action::ClearScreen => tui.terminal.clear()?,
                 Action::EventLogDetailShow => {
-                    self.mode = Mode::EventLogDetail;
-                    debug!(mode = ?self.mode, "mode switched");
+                    self.set_mode(Mode::EventLogDetail);
                 }
-                Action::EventLogListShow => {
-                    self.mode = Mode::Home;
-                    debug!(mode = ?self.mode, "mode switched");
+                Action::EventLogListShow | Action::FilterHide | Action::FormatHide => {
+                    self.set_mode(Mode::Home);
                 }
                 Action::FilterAdd | Action::FilterEdit => {
-                    self.mode = Mode::FilterEdit;
-                    debug!(mode = ?self.mode, "mode switched");
+                    self.set_mode(Mode::FilterEdit);
                 }
                 Action::FilterCancel | Action::FilterShow | Action::FilterSubmit => {
-                    self.mode = Mode::Filter;
-                    debug!(mode = ?self.mode, "mode switched");
-                }
-                Action::FilterHide | Action::FormatHide => {
-                    self.mode = Mode::Home;
-                    debug!(mode = ?self.mode, "mode switched");
+                    self.set_mode(Mode::Filter);
                 }
                 Action::FormatShow => {
-                    self.mode = Mode::Format;
-                    debug!(mode = ?self.mode, "mode switched");
+                    self.set_mode(Mode::Format);
                 }
                 Action::Quit => self.should_quit = true,
                 Action::Render => self.render(tui)?,
@@ -263,6 +254,15 @@ impl App {
         })?;
 
         Ok(())
+    }
+
+    pub fn set_mode(&mut self, mode: Mode) {
+        if mode == self.mode {
+            return;
+        }
+
+        self.mode = mode;
+        debug!(mode = ?self.mode, "mode switched");
     }
 }
 
