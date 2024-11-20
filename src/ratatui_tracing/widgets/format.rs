@@ -28,7 +28,7 @@ impl<'a> Default for Format<'a> {
         let cell_highlight_style = Style::default().bold().fg(Color::Black).bg(Color::Gray);
         let highlight_symbol = "❯".into();
         let row_highlight_style = Style::default().bold();
-        let table_style = Style::default().bg(Color::Black);
+        let table_style = Style::default().bg(Color::Reset);
 
         Self {
             block,
