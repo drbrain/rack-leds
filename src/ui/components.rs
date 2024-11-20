@@ -1,11 +1,13 @@
 mod event_log;
 pub mod fps;
+mod help;
 pub mod home;
 
 use crate::ui::{tui::Event, Action, Config};
 use color_eyre::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 pub use event_log::EventLog;
+pub use help::Help;
 use ratatui::{
     layout::{Rect, Size},
     Frame,

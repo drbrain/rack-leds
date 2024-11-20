@@ -34,13 +34,13 @@ pub enum Action {
     EventLogWrapToggle,
     #[strum(props(Help = "Add filter"))]
     FilterAdd,
-    #[strum(props(Help = "Cancel filter add/edit"))]
+    #[strum(props(Help = "Cancel filter add/edit", Back = "true"))]
     FilterCancel,
     #[strum(props(Help = "Delete filter"))]
     FilterDelete,
     #[strum(props(Help = "Edit filter"))]
     FilterEdit,
-    #[strum(props(Help = "Edit filter"))]
+    #[strum(props(Help = "Edit filter", Back = "true"))]
     FilterHide,
     #[strum(props(Help = "Last filter"))]
     FilterLast,
@@ -54,7 +54,7 @@ pub enum Action {
     FilterShow,
     #[strum(props(Help = "Submit filter add/edit"))]
     FilterSubmit,
-    #[strum(props(Help = "Hide format dialog"))]
+    #[strum(props(Help = "Hide format dialog", Back = "true"))]
     FormatHide,
     #[strum(props(Help = "Toggle format setting"))]
     FormatRowEdit,
@@ -69,8 +69,10 @@ pub enum Action {
     #[strum(props(Help = "Show format dialog"))]
     FormatShow,
     Input(KeyEvent),
+    #[strum(props(Help = "Hide help", Back = "true"))]
+    HelpHide,
     #[strum(props(Help = "Show help"))]
-    Help,
+    HelpShow,
     #[strum(props(Help = "Quit"))]
     Quit,
     Render,

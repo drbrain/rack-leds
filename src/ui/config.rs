@@ -12,7 +12,7 @@ use tracing::error;
 
 use crate::ui::{action::Action, app::Mode};
 
-const CONFIG: &str = include_str!("../../.config/config.json5");
+const CONFIG: &str = include_str!("../../.config/config.toml");
 
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct AppConfig {
@@ -49,7 +49,7 @@ pub static CONFIG_FOLDER: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
 
 impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
-        let default_config: Config = json5::from_str(CONFIG).unwrap();
+        let default_config: Config = toml::from_str(CONFIG).unwrap();
         let data_dir = get_data_dir();
         let config_dir = get_config_dir();
         let mut builder = config::Config::builder()
@@ -80,7 +80,7 @@ impl Config {
         let mut cfg: Self = builder.build()?.try_deserialize()?;
 
         for (mode, default_bindings) in default_config.keybindings.iter() {
-            let user_bindings = cfg.keybindings.entry(*mode).or_default();
+            let user_bindings = cfg.keybindings.entry(mode.clone()).or_default();
             for (key, cmd) in default_bindings.iter() {
                 user_bindings
                     .entry(key.clone())
@@ -88,7 +88,7 @@ impl Config {
             }
         }
         for (mode, default_styles) in default_config.styles.iter() {
-            let user_styles = cfg.styles.entry(*mode).or_default();
+            let user_styles = cfg.styles.entry(mode.clone()).or_default();
             for (style_key, style) in default_styles.iter() {
                 user_styles.entry(style_key.clone()).or_insert(*style);
             }
@@ -121,7 +121,7 @@ pub fn get_config_dir() -> PathBuf {
 }
 
 fn project_directory() -> Option<ProjectDirs> {
-    ProjectDirs::from("com", "kdheepak", env!("CARGO_PKG_NAME"))
+    ProjectDirs::from("net", "segment7", env!("CARGO_PKG_NAME"))
 }
 
 #[derive(Clone, Debug, Default, Deref, DerefMut)]

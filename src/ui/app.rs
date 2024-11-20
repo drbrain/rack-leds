@@ -1,4 +1,4 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
@@ -13,7 +13,7 @@ use crate::{
     ratatui_tracing::{EventReceiver, Reloadable},
     ui::{
         action::Action,
-        components::{fps::FpsCounter, home::Home, Component},
+        components::{fps::FpsCounter, home::Home, Component, Help},
         config::Config,
         tui::{Event, Tui},
     },
@@ -28,21 +28,31 @@ pub struct App {
     components: Vec<Box<dyn Component>>,
     should_quit: bool,
     should_suspend: bool,
-    mode: Mode,
+    mode: Arc<Mutex<Mode>>,
+    previous_mode: Arc<Mutex<Option<Mode>>>,
     last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
 }
 
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Deserialize, Clone, Eq, Hash, strum::IntoStaticStr, PartialEq, Serialize,
+)]
 pub enum Mode {
     #[default]
     Home,
+    #[strum(serialize = "Event log detail")]
     EventLogDetail,
+    #[strum(serialize = "Filter")]
     Filter,
+    #[strum(serialize = "Filter edit")]
     FilterEdit,
+    #[strum(serialize = "Filter submit")]
     FilterSubmit,
+    #[strum(serialize = "Format")]
     Format,
+    #[strum(serialize = "Help")]
+    Help,
 }
 
 impl App {
@@ -61,6 +71,9 @@ impl App {
 
         render_on_update(events.resubscribe(), updates.clone(), action_tx.clone())?;
 
+        let mode = Arc::new(Mutex::new(Mode::Home));
+        let previous_mode = Arc::new(Mutex::new(None));
+
         Ok(Self {
             gui_active,
             tick_rate,
@@ -68,11 +81,13 @@ impl App {
             components: vec![
                 Box::new(Home::new(columns, updates, png_sender, events, reloadable)),
                 Box::new(FpsCounter::default()),
+                Box::new(Help::new(previous_mode.clone())),
             ],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
-            mode: Mode::Home,
+            mode,
+            previous_mode,
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
@@ -157,7 +172,7 @@ impl App {
 
     #[instrument(skip_all, fields(?key))]
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
-        let Some(keymap) = self.config.keybindings.get(&self.mode) else {
+        let Some(keymap) = self.config.keybindings.get(&self.mode()) else {
             return Ok(());
         };
 
@@ -169,7 +184,7 @@ impl App {
                 action_tx.send(action.clone())?;
             }
             _ => {
-                if self.mode == Mode::FilterEdit {
+                if self.mode() == Mode::FilterEdit {
                     action_tx.send(Action::Input(key))?;
 
                     return Ok(());
@@ -213,6 +228,24 @@ impl App {
                 Action::FormatShow => {
                     self.set_mode(Mode::Format);
                 }
+                Action::HelpShow => {
+                    {
+                        let mut guard = self.previous_mode.lock().unwrap();
+                        *guard = Some(self.mode());
+                    }
+
+                    self.set_mode(Mode::Help);
+                }
+                Action::HelpHide => {
+                    let previous = {
+                        let mut guard = self.previous_mode.lock().unwrap();
+                        let previous = guard.clone().unwrap_or_default();
+                        *guard = None;
+                        previous
+                    };
+
+                    self.set_mode(previous);
+                }
                 Action::Quit => self.should_quit = true,
                 Action::Render => self.render(tui)?,
                 Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
@@ -242,6 +275,12 @@ impl App {
         Ok(())
     }
 
+    pub fn mode(&self) -> Mode {
+        let guard = self.mode.lock().unwrap();
+
+        guard.clone()
+    }
+
     fn render(&mut self, tui: &mut Tui) -> Result<()> {
         tui.draw(|frame| {
             for component in self.components.iter_mut() {
@@ -256,13 +295,16 @@ impl App {
         Ok(())
     }
 
-    pub fn set_mode(&mut self, mode: Mode) {
-        if mode == self.mode {
+    pub fn set_mode(&self, mode: Mode) {
+        let mut guard = self.mode.lock().unwrap();
+
+        if mode == *guard {
             return;
         }
 
-        self.mode = mode;
-        debug!(mode = ?self.mode, "mode switched");
+        *guard = mode.clone();
+
+        debug!(?mode, "mode switched");
     }
 }
 
