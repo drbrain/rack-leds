@@ -57,13 +57,9 @@ impl<'a> StatefulWidget for EventLog<'a> {
             let selected = selected.unwrap_or(0);
 
             let event = events
-                .find_map(|(i, event)| {
-                    if i == selected {
-                        Some(event.clone())
-                    } else {
-                        None
-                    }
-                })
+                .nth(selected)
+                .map(|(_, event)| event)
+                .cloned()
                 .unwrap_or_else(|| Event::dropped(selected, total).into());
 
             event.to_pretty(epoch, &state.format).render(area, buf);
