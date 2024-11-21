@@ -1,39 +1,10 @@
 use crossterm::event::KeyEvent;
 use ratatui::widgets::ListState;
 
-use crate::ratatui_tracing::widgets::FilterEditState;
-use crate::ratatui_tracing::Reloadable;
-
-#[derive(Clone, Default)]
-enum ViewState {
-    Add,
-    Edit {
-        original: usize,
-    },
-    #[default]
-    View,
-}
-
-impl ViewState {
-    fn try_to_add(&self) -> Option<Self> {
-        match self {
-            Self::View => Some(Self::Add),
-            _ => None,
-        }
-    }
-
-    fn try_to_edit(&self, original: Option<usize>) -> Option<Self> {
-        match (self, original) {
-            (ViewState::View, None) => Some(Self::Add),
-            (ViewState::View, Some(original)) => Some(Self::Edit { original }),
-            _ => None,
-        }
-    }
-
-    fn to_view(&self) -> Self {
-        Self::View
-    }
-}
+use crate::ratatui_tracing::{
+    widgets::{FilterEditState, ViewState},
+    Reloadable,
+};
 
 pub struct FilterState<'a> {
     pub(crate) reloadable: Reloadable,
@@ -103,8 +74,9 @@ impl<'a> FilterState<'a> {
     }
 
     pub fn is_editing(&self) -> bool {
-        matches!(self.view_state, ViewState::Add | ViewState::Edit { .. })
+        self.view_state.is_editing()
     }
+
     pub fn key(&mut self, key: KeyEvent) {
         self.filter_edit_state.key(key);
     }

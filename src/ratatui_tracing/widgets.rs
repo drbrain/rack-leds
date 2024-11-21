@@ -8,6 +8,7 @@ mod format;
 mod format_state;
 mod scope_display;
 mod time_format;
+mod view_state;
 
 pub use event_log::EventLog;
 pub use event_log_state::EventLogState;
@@ -19,3 +20,4 @@ pub use format::Format;
 pub use format_state::FormatState;
 pub use scope_display::ScopeDisplay;
 pub use time_format::TimeFormat;
+pub(crate) use view_state::ViewState;
