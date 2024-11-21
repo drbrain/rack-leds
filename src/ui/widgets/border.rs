@@ -16,13 +16,39 @@ impl<'a> Border<'a> {
         Self { block }
     }
 
-    pub fn border_type<T>(self, border_type: T) -> Self
+    pub fn build(self) -> Block<'a> {
+        self.block
+    }
+
+    pub fn detail<T>(self, detail: T) -> Self
     where
         T: Into<Line<'a>>,
     {
-        let border_type: Line<'_> = border_type.into();
+        let detail: Line<'_> = detail.into();
 
-        let block = self.block.title(border_type.left_aligned());
+        let block = self.block.title(detail.right_aligned());
+
+        Self { block }
+    }
+
+    pub fn name<T>(self, name: T) -> Self
+    where
+        T: Into<Line<'a>>,
+    {
+        let name: Line<'_> = name.into();
+
+        let block = self.block.title(name.left_aligned());
+
+        Self { block }
+    }
+
+    pub fn help<T>(self, help: T) -> Self
+    where
+        T: Into<Line<'a>>,
+    {
+        let help: Line<'_> = help.into();
+
+        let block = self.block.title_bottom(help.right_aligned().italic());
 
         Self { block }
     }
@@ -37,18 +63,7 @@ impl<'a> Border<'a> {
         }
     }
 
-    pub fn status<T>(self, status: T) -> Self
-    where
-        T: Into<Line<'a>>,
-    {
-        let status: Line<'_> = status.into();
-
-        let block = self.block.title(status.right_aligned());
-
-        Self { block }
-    }
-
-    pub fn title<T>(self, title: T) -> Self
+    pub fn status<T>(self, title: T) -> Self
     where
         T: Into<Line<'a>>,
     {
@@ -62,20 +77,10 @@ impl<'a> Border<'a> {
     pub fn uniform(self, padding: u16) -> Self {
         self.padding(Padding::uniform(padding))
     }
-
-    pub fn vertical(self, padding: u16) -> Self {
-        self.padding(Padding::vertical(padding))
-    }
 }
 
 impl<'a> Default for Border<'a> {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl<'a> From<&'a Border<'a>> for Block<'a> {
-    fn from(border: &'a Border) -> Self {
-        border.block.clone()
     }
 }

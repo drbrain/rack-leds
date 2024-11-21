@@ -77,7 +77,11 @@ impl Component for Help {
 
         let mode: &str = self.previous_mode().into();
 
-        let border = Border::new().border_type("Help").title(mode).uniform(1);
+        let border = Border::new()
+            .name("Help")
+            .help("Esc to dismiss")
+            .status(mode)
+            .uniform(1);
 
         let Some(keys) = self.active_keys() else {
             return draw_no_help(mode, &border, area, frame);
@@ -98,14 +102,14 @@ impl Component for Help {
             })
             .collect();
 
-        let width = rows.iter().map(|(_, width)| width).max().unwrap_or(&40) + 2;
+        let width = rows.iter().map(|(_, width)| width).max().unwrap_or(&40) + 3;
         let width = width.try_into().unwrap_or(u16::MAX);
         let height = rows.len().min(area.height as usize) + 4;
 
         let rows: Vec<_> = rows.into_iter().map(|(row, _)| row).collect();
 
         let table = Table::new(rows, Constraint::from_lengths([width, width]))
-            .block((&border).into())
+            .block(border.build())
             .column_spacing(2)
             .flex(Flex::Center);
 
@@ -164,7 +168,7 @@ fn draw_no_help(mode: &str, border: &Border<'_>, area: Rect, frame: &mut Frame<'
     let width = line.width() + 4;
     let width = width.try_into().unwrap_or(u16::MAX);
 
-    let paragraph = Paragraph::new(line).block(border.into());
+    let paragraph = Paragraph::new(line).block(border.clone().build());
     let height = paragraph.line_count(width);
     let area = center_exactly(area, width, height);
 
@@ -221,4 +225,3 @@ mod test {
         assert_eq!(expected.to_string(), super::key_name(&key), "for {key:?}");
     }
 }
-

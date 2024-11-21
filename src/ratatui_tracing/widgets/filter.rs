@@ -1,38 +1,46 @@
 use ratatui::{
     prelude::*,
-    widgets::{
-        Block, BorderType, Clear, HighlightSpacing, List, ListDirection, ListItem, Padding,
-        StatefulWidget,
-    },
+    widgets::{Block, Clear, HighlightSpacing, List, ListDirection, ListItem, StatefulWidget},
 };
 
 use crate::ratatui_tracing::widgets::{FilterEdit, FilterState};
 
 pub struct Filter<'a> {
-    block: Block<'a>,
-    block_help_style: Style,
-    block_title_style: Style,
+    block: Option<Block<'a>>,
     list_highlight_style: Style,
     list_highlight_symbol: String,
 }
 
-impl<'a> Filter<'a> {}
+impl<'a> Filter<'a> {
+    pub fn block(mut self, block: Block<'a>) -> Self {
+        self.block = Some(block);
+
+        self
+    }
+
+    fn list(&'a self, items: Vec<ListItem<'a>>) -> List<'a> {
+        let list = List::new(items);
+
+        let list = if let Some(ref block) = self.block {
+            list.block(block.clone())
+        } else {
+            list
+        };
+
+        list.highlight_symbol(&self.list_highlight_symbol)
+            .highlight_spacing(HighlightSpacing::Always)
+            .highlight_style(self.list_highlight_style)
+            .direction(ListDirection::TopToBottom)
+    }
+}
 
 impl<'a> Default for Filter<'a> {
     fn default() -> Self {
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .padding(Padding::symmetric(1, 0));
-
-        let block_title_style = Style::default().bold();
-        let block_help_style = Style::default().italic();
         let list_highlight_style = Style::default().bold().fg(Color::Black).bg(Color::Gray);
         let list_highlight_symbol = "❯".into();
 
         Self {
-            block,
-            block_help_style,
-            block_title_style,
+            block: None,
             list_highlight_style,
             list_highlight_symbol,
         }
@@ -57,23 +65,7 @@ impl<'a> StatefulWidget for Filter<'a> {
                 .map(|directive| ListItem::new(directive.to_string()))
                 .collect();
 
-            let block = self
-                .block
-                .title(Line::from("Filters").style(self.block_title_style))
-                .title_bottom(
-                    Line::from("Esc to dismiss")
-                        .right_aligned()
-                        .style(self.block_help_style),
-                );
-
-            let list = List::new(items)
-                .block(block)
-                .highlight_symbol(&self.list_highlight_symbol)
-                .highlight_spacing(HighlightSpacing::Always)
-                .highlight_style(self.list_highlight_style)
-                .direction(ListDirection::TopToBottom);
-
-            StatefulWidget::render(list, area, buf, &mut state.list_state);
+            StatefulWidget::render(self.list(items), area, buf, &mut state.list_state);
         }
     }
 }

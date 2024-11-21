@@ -2,36 +2,31 @@ use std::convert::Into;
 
 use ratatui::{
     prelude::*,
-    widgets::{Block, BorderType, Paragraph, Scrollbar, ScrollbarState, StatefulWidget, Wrap},
+    widgets::{Block, Paragraph, Scrollbar, ScrollbarState, StatefulWidget, Wrap},
 };
 
 use crate::ratatui_tracing::{widgets::EventLogState, Event};
 
 pub struct EventLog<'a> {
-    block: Block<'a>,
+    block: Option<Block<'a>>,
     highlight_style: Style,
-    status_live_style: Style,
-    status_paused_style: Style,
-    title: String,
-    title_style: Style,
+}
+
+impl<'a> EventLog<'a> {
+    pub fn block(mut self, block: Block<'a>) -> Self {
+        self.block = Some(block);
+
+        self
+    }
 }
 
 impl<'a> Default for EventLog<'a> {
     fn default() -> Self {
-        let block = Block::bordered().border_type(BorderType::Rounded);
-        let title = "Log".to_string();
         let highlight_style = Style::default().bg(Color::DarkGray);
-        let status_live_style = Style::default().bold();
-        let status_paused_style = Style::default().bold().fg(Color::Yellow);
-        let title_style = Style::default().bold();
 
         Self {
-            block,
+            block: None,
             highlight_style,
-            status_live_style,
-            status_paused_style,
-            title_style,
-            title,
         }
     }
 }
@@ -40,47 +35,18 @@ impl<'a> StatefulWidget for EventLog<'a> {
     type State = EventLogState<'a>;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        let history = state.history();
         let total = state.total();
 
-        let event_title = if state.is_live() {
-            Line::from(format!("{total} events")).style(self.status_live_style)
+        let area = if let Some(block) = self.block {
+            let log_area = block.inner(area);
+            block.render(area, buf);
+
+            log_area
         } else {
-            let snapshot_total = history.total();
-
-            let new = if total > snapshot_total {
-                let new = total.saturating_sub(snapshot_total);
-
-                format!(", +{new} live")
-            } else {
-                "".to_string()
-            };
-
-            Line::from(format!(
-                "event {} / {}{new}",
-                history.offset(),
-                history.len()
-            ))
-            .style(self.status_paused_style)
+            area
         };
 
-        let status_title = if state.is_live() {
-            Line::from("Live").style(self.status_live_style)
-        } else {
-            Line::from("PAUSED").style(self.status_paused_style)
-        };
-
-        let block = self
-            .block
-            .clone()
-            .title(Line::from(self.title.clone()).style(self.title_style))
-            .title(status_title.centered())
-            .title(event_title.right_aligned());
-
-        let log_area = block.inner(area);
-        block.render(area, buf);
-
-        let (log_area, scroll_area_vertical) = state.scroll_area_vertical(log_area);
+        let (area, scroll_area_vertical) = state.scroll_area_vertical(area);
 
         let mut events = state.history().events();
 
@@ -100,11 +66,11 @@ impl<'a> StatefulWidget for EventLog<'a> {
                 })
                 .unwrap_or_else(|| Event::dropped(selected, total).into());
 
-            event.to_pretty(epoch, &state.format).render(log_area, buf);
+            event.to_pretty(epoch, &state.format).render(area, buf);
         } else {
             let events = events.map(|(i, event)| (i, event.to_line(epoch, &state.format)));
 
-            let (log_area, scroll_area_horizontal) = state.scroll_area_horizontal(log_area);
+            let (area, scroll_area_horizontal) = state.scroll_area_horizontal(area);
 
             let mut current_height = 0;
             let mut max_width = 0;
@@ -123,8 +89,8 @@ impl<'a> StatefulWidget for EventLog<'a> {
                 };
 
                 let mut truncate = false;
-                let remaining_height = log_area.height.saturating_sub(current_height);
-                let height = event.line_count(log_area.width) as u16;
+                let remaining_height = area.height.saturating_sub(current_height);
+                let height = event.line_count(area.width) as u16;
 
                 let height = if remaining_height == 0 {
                     break;
@@ -138,9 +104,9 @@ impl<'a> StatefulWidget for EventLog<'a> {
                 };
 
                 let event_area = Rect {
-                    x: log_area.left(),
-                    y: log_area.bottom() - current_height,
-                    width: log_area.width,
+                    x: area.left(),
+                    y: area.bottom() - current_height,
+                    width: area.width,
                     height,
                 };
 

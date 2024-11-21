@@ -2,6 +2,8 @@ use eyre::Result;
 use ratatui::{
     layout::{Constraint, Layout, Size},
     prelude::Rect,
+    style::{Color, Stylize},
+    text::Line,
     Frame,
 };
 
@@ -10,7 +12,7 @@ use crate::{
         widgets::{EventLogState, Filter, Format},
         EventReceiver, Reloadable,
     },
-    ui::{Action, Component},
+    ui::{widgets::Border, Action, Component},
 };
 
 #[derive(Default)]
@@ -48,7 +50,13 @@ impl<'a> EventLog<'a> {
             Layout::vertical([Constraint::Min(2), Constraint::Min(15), Constraint::Fill(1)])
                 .areas(middle);
 
-        frame.render_stateful_widget(Filter::default(), center, &mut self.log.filter);
+        let block = Border::new()
+            .horizontal(1)
+            .name("Filters")
+            .help("Esc to dismiss")
+            .build();
+
+        frame.render_stateful_widget(Filter::default().block(block), center, &mut self.log.filter);
     }
 
     fn render_format(&mut self, area: Rect, frame: &mut Frame<'_>) {
@@ -63,7 +71,13 @@ impl<'a> EventLog<'a> {
             Layout::vertical([Constraint::Min(2), Constraint::Min(15), Constraint::Fill(1)])
                 .areas(middle);
 
-        frame.render_stateful_widget(Format::default(), center, &mut self.log.format);
+        let block = Border::new()
+            .horizontal(1)
+            .name("Filters")
+            .help("Esc to dismiss")
+            .build();
+
+        frame.render_stateful_widget(Format::default().block(block), center, &mut self.log.format);
     }
 }
 
@@ -75,7 +89,46 @@ impl Component for EventLog<'_> {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        let event_log = crate::ratatui_tracing::widgets::EventLog::default();
+        let status = if self.log.is_live() {
+            Line::from("Live").bold()
+        } else {
+            Line::from("PAUSED").bold().fg(Color::Yellow)
+        };
+
+        let detail = if self.log.is_live() {
+            let total = self.log.total();
+
+            Line::from(format!("{total} events")).bold()
+        } else {
+            let total = self.log.total();
+            let history = self.log.history();
+            let snapshot_total = history.total();
+
+            let new = if total > snapshot_total {
+                let new = total.saturating_sub(snapshot_total);
+
+                format!(", +{new} live")
+            } else {
+                "".to_string()
+            };
+
+            Line::from(format!(
+                "event {} / {}{new}",
+                history.offset(),
+                history.len()
+            ))
+            .bold()
+            .fg(Color::Yellow)
+        };
+
+        let block = Border::new()
+            .name("Log")
+            .status(status)
+            .detail(detail)
+            .build();
+
+        let event_log = crate::ratatui_tracing::widgets::EventLog::default().block(block);
+
         frame.render_stateful_widget(event_log, area, &mut self.log);
 
         match self.view_state {
