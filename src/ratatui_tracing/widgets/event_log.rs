@@ -40,12 +40,11 @@ impl<'a> StatefulWidget for EventLog<'a> {
     type State = EventLogState<'a>;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        let this = &self;
         let history = state.history();
         let total = state.total();
 
         let event_title = if state.is_live() {
-            Line::from(format!("{total} events")).style(this.status_live_style)
+            Line::from(format!("{total} events")).style(self.status_live_style)
         } else {
             let snapshot_total = history.total();
 
@@ -62,19 +61,19 @@ impl<'a> StatefulWidget for EventLog<'a> {
                 history.offset(),
                 history.len()
             ))
-            .style(this.status_paused_style)
+            .style(self.status_paused_style)
         };
 
         let status_title = if state.is_live() {
-            Line::from("Live").style(this.status_live_style)
+            Line::from("Live").style(self.status_live_style)
         } else {
-            Line::from("PAUSED").style(this.status_paused_style)
+            Line::from("PAUSED").style(self.status_paused_style)
         };
 
-        let block = this
+        let block = self
             .block
             .clone()
-            .title(Line::from(this.title.clone()).style(this.title_style))
+            .title(Line::from(self.title.clone()).style(self.title_style))
             .title(status_title.centered())
             .title(event_title.right_aligned());
 
