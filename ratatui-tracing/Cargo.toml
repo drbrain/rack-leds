@@ -1,0 +1,22 @@
+[package]
+name = "ratatui-tracing"
+description = "Display tracing-subscriber events in your ratatui application"
+authors.workspace = true
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+eyre.workspace = true
+crossterm.workspace = true
+itertools.workspace = true
+ratatui.workspace = true
+strum.workspace = true
+time.workspace = true
+tokio.workspace = true
+tracing-error.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+tui-textarea.workspace = true
+
+[dev-dependencies]
+

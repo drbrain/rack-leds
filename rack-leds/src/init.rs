@@ -6,10 +6,9 @@ use std::{
     },
 };
 
-use crate::{
-    ratatui_tracing::{self, EnvFilterResult, EventReceiver, Reloadable},
-    Args, RatatuiTracing, LOCAL_OFFSET,
-};
+use ratatui_tracing::{EnvFilterResult, EventReceiver, RatatuiTracing, Reloadable};
+
+use crate::Args;
 use clap::Parser;
 use color_eyre::config::HookBuilder;
 use eyre::Result;
@@ -74,17 +73,6 @@ pub(crate) fn eyre() -> Result<()> {
     }));
 
     Ok(())
-}
-
-pub(crate) fn local_offset() {
-    LOCAL_OFFSET.get_or_init(|| match UtcOffset::current_local_offset() {
-        Ok(offset) => offset,
-        Err(error) => {
-            warn!(?error, "Log Local RFC3339 will use UTC");
-
-            UtcOffset::UTC
-        }
-    });
 }
 
 pub(crate) fn tracing(args: &Args) -> (Arc<AtomicBool>, EventReceiver, Reloadable) {
@@ -161,7 +149,18 @@ fn stdout_layer(gui_active: &Arc<AtomicBool>) -> Box<dyn Layer<Registry> + Send 
 fn ratatui_layer(
     gui_active: &Arc<AtomicBool>,
 ) -> (EventReceiver, Box<dyn Layer<Registry> + Send + Sync>) {
-    let tui = RatatuiTracing::default();
+    let offset = match UtcOffset::current_local_offset() {
+        Ok(offset) => Some(offset),
+        Err(error) => {
+            warn!(?error, "unable to determine local UTC offset");
+            None
+        }
+    };
+
+    let tui = offset
+        .map(|offset| RatatuiTracing::default().with_local_offset(offset))
+        .unwrap_or_default();
+
     let reader = tui.subscribe();
     let tui_gui_active = gui_active.clone();
     let tui = tui

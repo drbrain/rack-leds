@@ -15,6 +15,7 @@ pub use event_receiver::EventReceiver;
 pub use history::History;
 pub use reloadable::Reloadable;
 pub use scope::Scope;
+use time::UtcOffset;
 pub use to_scope_visitor::ToScopeVisitor;
 use tokio::sync::broadcast;
 use tracing::{
@@ -37,17 +38,18 @@ pub type ReloadHandle = reload::Handle<EnvFilter, Registry>;
 ///
 /// ```
 /// # use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
-/// # use tracing_subscriber::filter::filter_fn;
-/// # use self::RatatuiTracing;
+/// # use tracing_subscriber::{filter::filter_fn, Layer, Registry};
+/// # use ratatui_tracing::RatatuiTracing;
 /// let gui_active = Arc::new(AtomicBool::new(false));
 ///
 /// let layer = RatatuiTracing::default();
 /// let reader = layer.subscribe();
 ///
 /// let tui_gui_active = gui_active.clone();
-/// let layer = layer.with_filter(filter_fn(move |_| {
-///     tui_gui_active.load(Ordering::Relaxed)
-/// })).boxed();
+/// let layer: Box<dyn Layer<Registry> + Send + Sync> =
+///     layer.with_filter(filter_fn(move |_| {
+///         tui_gui_active.load(Ordering::Relaxed)
+///     })).boxed();
 /// ```
 ///
 /// From the example, register `layer` with the tracing-subscriber registry.  Use
@@ -60,8 +62,9 @@ pub type ReloadHandle = reload::Handle<EnvFilter, Registry>;
 /// Use `reader` with [`widgets::EventLogState`] (and [`widgets::EventLog`]) to display captured
 /// events.
 pub struct RatatuiTracing {
-    sender: broadcast::Sender<Event>,
     epoch: Instant,
+    sender: broadcast::Sender<Event>,
+    local_offset: Option<UtcOffset>,
 }
 
 impl RatatuiTracing {
@@ -70,17 +73,33 @@ impl RatatuiTracing {
     /// Allow `capacity` in-flight events per receiver
     ///
     /// The `epoch` is used to determine process start time for relative time formatting in the log
-    pub fn new(capacity: usize, epoch: Instant) -> Self {
+    pub fn new(capacity: usize, epoch: Instant, local_offset: Option<UtcOffset>) -> Self {
         let (sender, _) = broadcast::channel(capacity);
 
-        Self { sender, epoch }
+        Self {
+            sender,
+            epoch,
+            local_offset,
+        }
+    }
+
+    /// Set a local UTC offset for this layer
+    pub fn with_local_offset(self, local_offset: UtcOffset) -> Self {
+        let Self { epoch, sender, .. } = self;
+
+        Self {
+            epoch,
+            sender,
+            local_offset: Some(local_offset),
+        }
     }
 
     /// Subscribe to events recorded by this layer
     pub fn subscribe(&self) -> EventReceiver {
         EventReceiver {
-            epoch: self.epoch,
             channel: self.sender.subscribe(),
+            epoch: self.epoch,
+            local_offset: self.local_offset,
         }
     }
 }
@@ -88,7 +107,7 @@ impl RatatuiTracing {
 impl Default for RatatuiTracing {
     /// A ratatui tracing layer with an epoch of now and storage for 100 in-flight events
     fn default() -> Self {
-        Self::new(100, Instant::now())
+        Self::new(100, Instant::now(), None)
     }
 }
 

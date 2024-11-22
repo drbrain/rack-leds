@@ -1,16 +1,18 @@
 use std::time::Instant;
 
 use eyre::Result;
+use time::UtcOffset;
 use tokio::sync::broadcast::{
     self,
     error::{RecvError, TryRecvError},
 };
 
-use crate::ratatui_tracing::Event;
+use crate::Event;
 
 pub struct EventReceiver {
-    pub epoch: Instant,
     pub channel: broadcast::Receiver<Event>,
+    pub epoch: Instant,
+    pub local_offset: Option<UtcOffset>,
 }
 
 impl EventReceiver {
@@ -19,9 +21,16 @@ impl EventReceiver {
     }
 
     pub fn resubscribe(&self) -> Self {
+        let Self {
+            channel,
+            epoch,
+            local_offset,
+        } = self;
+
         EventReceiver {
-            epoch: self.epoch,
-            channel: self.channel.resubscribe(),
+            channel: channel.resubscribe(),
+            epoch: *epoch,
+            local_offset: *local_offset,
         }
     }
 

@@ -1,0 +1,52 @@
+[package]
+name = "rack-leds"
+description = "Display prometheus query data on an LED matrix"
+authors.workspace = true
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+better-panic.workspace = true
+bytes.workspace = true
+clap.workspace = true
+color-art.workspace = true
+color-eyre.workspace = true
+colorgrad.workspace = true
+config.workspace = true
+console-subscriber.workspace = true
+crossterm.workspace = true
+deadpool.workspace = true
+derive_deref.workspace = true
+directories.workspace = true
+eyre.workspace = true
+futures.workspace = true
+http-body-util.workspace = true
+httpdate.workspace = true
+human-panic.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+itertools.workspace = true
+json5.workspace = true
+libc.workspace = true
+png.workspace = true
+pretty_assertions.workspace = true
+prometheus-http-query.workspace = true
+rand.workspace = true
+ratatui.workspace = true
+ratatui-tracing = { path = "../ratatui-tracing" }
+serde.workspace = true
+serde_json.workspace = true
+signal-hook.workspace = true
+strip-ansi-escapes.workspace = true
+strum.workspace = true
+time.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-error.workspace = true
+tracing-subscriber.workspace = true
+tui-textarea.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true

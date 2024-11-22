@@ -3,7 +3,7 @@ use ratatui::{
     widgets::{Block, Clear, HighlightSpacing, List, ListDirection, ListItem, StatefulWidget},
 };
 
-use crate::ratatui_tracing::widgets::{FilterEdit, FilterState};
+use crate::widgets::{FilterEdit, FilterState};
 
 pub struct Filter<'a> {
     block: Option<Block<'a>>,

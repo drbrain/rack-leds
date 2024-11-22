@@ -6,14 +6,12 @@ use ratatui::{
     text::Line,
     Frame,
 };
-
-use crate::{
-    ratatui_tracing::{
-        widgets::{EventLogState, Filter, Format},
-        EventReceiver, Reloadable,
-    },
-    ui::{widgets::Border, Action, Component},
+use ratatui_tracing::{
+    widgets::{EventLog, EventLogState, Filter, Format},
+    EventReceiver, Reloadable,
 };
+
+use crate::ui::{widgets::Border, Action, Component};
 
 #[derive(Default)]
 enum ViewState {
@@ -23,12 +21,12 @@ enum ViewState {
     None,
 }
 
-pub struct EventLog<'a> {
+pub struct Log<'a> {
     pub(crate) log: EventLogState<'a>,
     view_state: ViewState,
 }
 
-impl<'a> EventLog<'a> {
+impl<'a> Log<'a> {
     pub fn new(events: EventReceiver, reloadable: Reloadable) -> Self {
         let log = EventLogState::new(events, 1000, reloadable);
 
@@ -81,7 +79,7 @@ impl<'a> EventLog<'a> {
     }
 }
 
-impl Component for EventLog<'_> {
+impl Component for Log<'_> {
     fn init(&mut self, area: Size) -> Result<()> {
         self.log.set_max_events(area.height.into());
 
@@ -127,7 +125,7 @@ impl Component for EventLog<'_> {
             .detail(detail)
             .build();
 
-        let event_log = crate::ratatui_tracing::widgets::EventLog::default().block(block);
+        let event_log = EventLog::default().block(block);
 
         frame.render_stateful_widget(event_log, area, &mut self.log);
 

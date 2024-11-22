@@ -7,7 +7,7 @@ use std::{
 use ratatui::widgets::ScrollbarState;
 use tokio::sync::broadcast::error::TryRecvError;
 
-use crate::ratatui_tracing::{Event, EventReceiver};
+use crate::{Event, EventReceiver};
 
 pub type Iter<'a> = iter::Skip<iter::Enumerate<iter::Rev<vec_deque::Iter<'a, Arc<Event>>>>>;
 

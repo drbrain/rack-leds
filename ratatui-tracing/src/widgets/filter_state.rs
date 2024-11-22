@@ -1,7 +1,7 @@
 use crossterm::event::KeyEvent;
 use ratatui::widgets::ListState;
 
-use crate::ratatui_tracing::{
+use crate::{
     widgets::{FilterEditState, ViewState},
     Reloadable,
 };

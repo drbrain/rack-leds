@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use time::{format_description::well_known, OffsetDateTime, UtcOffset};
 
-use crate::ratatui_tracing::Event;
+use crate::Event;
 
 #[derive(Clone, Copy, Default, strum::IntoStaticStr)]
 pub enum TimeFormat {
@@ -20,28 +20,41 @@ pub enum TimeFormat {
 }
 
 impl TimeFormat {
-    pub fn next(&self) -> Self {
+    pub fn next(&self, local_offset: Option<UtcOffset>) -> Self {
         match self {
             TimeFormat::Rfc3339Local => TimeFormat::Rfc3339Utc,
             TimeFormat::Rfc3339Utc => TimeFormat::Uptime,
             TimeFormat::Uptime => TimeFormat::None,
-            TimeFormat::None => TimeFormat::Rfc3339Local,
+            TimeFormat::None => {
+                if local_offset.is_some() {
+                    TimeFormat::Rfc3339Local
+                } else {
+                    TimeFormat::Rfc3339Utc
+                }
+            }
         }
     }
 
-    pub fn format(&self, event: &Event, epoch: Instant, local_offset: UtcOffset) -> Option<String> {
-        match self {
-            TimeFormat::Rfc3339Local => Some(format_rfc3339(
+    pub fn format(
+        &self,
+        event: &Event,
+        epoch: Instant,
+        local_offset: Option<UtcOffset>,
+    ) -> Option<String> {
+        match (self, local_offset) {
+            (TimeFormat::Rfc3339Local, Some(local_offset)) => Some(format_rfc3339(
                 event.recorded_date_time(),
                 Some(local_offset),
             )),
-            TimeFormat::Rfc3339Utc => Some(format_rfc3339(event.recorded_date_time(), None)),
-            TimeFormat::Uptime => {
+            (TimeFormat::Rfc3339Local, None) | (TimeFormat::Rfc3339Utc, _) => {
+                Some(format_rfc3339(event.recorded_date_time(), None))
+            }
+            (TimeFormat::None, _) => None,
+            (TimeFormat::Uptime, _) => {
                 let elapsed = event.recorded().saturating_duration_since(epoch);
 
                 Some(format!("{:.6}", elapsed.as_secs_f64()))
             }
-            TimeFormat::None => None,
         }
     }
 }

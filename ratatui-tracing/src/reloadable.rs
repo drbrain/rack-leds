@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use tracing_subscriber::{filter::Directive, EnvFilter};
 
-use crate::ratatui_tracing::ReloadHandle;
+use crate::ReloadHandle;
 
 #[derive(Clone)]
 pub struct Reloadable {

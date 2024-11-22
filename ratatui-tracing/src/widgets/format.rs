@@ -3,7 +3,7 @@ use ratatui::{
     widgets::{Block, Clear, HighlightSpacing, Row, StatefulWidget, Table},
 };
 
-use crate::ratatui_tracing::widgets::FormatState;
+use crate::widgets::FormatState;
 
 pub struct Format<'a> {
     block: Option<Block<'a>>,

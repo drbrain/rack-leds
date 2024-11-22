@@ -10,7 +10,7 @@ use time::OffsetDateTime;
 use tracing::{Level, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
-use crate::ratatui_tracing::{
+use crate::{
     widgets::{FormatState, ScopeDisplay, TimeFormat},
     Scope, ToScopeVisitor,
 };

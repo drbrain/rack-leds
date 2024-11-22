@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use ratatui::layout::{Constraint, Layout, Rect};
 
-use crate::ratatui_tracing::{
+use crate::{
     widgets::{FilterState, FormatState},
     EventReceiver, History, Reloadable,
 };
@@ -11,9 +11,9 @@ pub struct EventLogState<'a> {
     closed: bool,
     detail: bool,
     event_receiver: EventReceiver,
-    pub(crate) filter: FilterState<'a>,
-    pub(crate) format: FormatState,
-    pub(crate) horizontal_offset: u16,
+    pub filter: FilterState<'a>,
+    pub format: FormatState,
+    pub horizontal_offset: u16,
     live_history: History,
     pause_history: Option<History>,
 }
@@ -25,6 +25,7 @@ impl<'a> EventLogState<'a> {
         reloadable: Reloadable,
     ) -> Self {
         let filter = FilterState::new(reloadable);
+        let format = (&event_receiver).into();
         let live_history = History::new(max_scrollback);
 
         Self {
@@ -32,7 +33,7 @@ impl<'a> EventLogState<'a> {
             detail: false,
             event_receiver,
             filter,
-            format: Default::default(),
+            format,
             horizontal_offset: 0,
             live_history,
             pause_history: None,
@@ -51,7 +52,7 @@ impl<'a> EventLogState<'a> {
         self.event_receiver.epoch
     }
 
-    pub(crate) fn history(&self) -> &History {
+    pub fn history(&self) -> &History {
         self.pause_history.as_ref().unwrap_or(&self.live_history)
     }
 

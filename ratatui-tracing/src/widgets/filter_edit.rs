@@ -3,7 +3,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, Padding, Widget},
 };
 
-use crate::ratatui_tracing::widgets::FilterEditState;
+use crate::widgets::FilterEditState;
 
 pub struct FilterEdit<'a> {
     block: Block<'a>,

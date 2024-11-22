@@ -3,6 +3,7 @@ use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
+use ratatui_tracing::{EventReceiver, Reloadable};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, error, instrument, trace, warn};
@@ -10,7 +11,6 @@ use tracing::{debug, error, instrument, trace, warn};
 use crate::{
     collector::UpdateReceiver,
     png_builder::PngSender,
-    ratatui_tracing::{EventReceiver, Reloadable},
     ui::{
         action::Action,
         components::{fps::FpsCounter, home::Home, Component, Help},

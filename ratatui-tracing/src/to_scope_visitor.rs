@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use crate::ratatui_tracing::Scope;
 use tracing::field::{Field, Visit};
+
+use crate::Scope;
 
 #[derive(Default)]
 pub struct ToScopeVisitor {

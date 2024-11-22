@@ -6,7 +6,7 @@ use tracing_subscriber::{
     reload, EnvFilter, Registry,
 };
 
-use crate::ratatui_tracing::Reloadable;
+use crate::Reloadable;
 
 /// A reloadable [`EnvFilter`] that tracks the [`Directive`]s it currently contains.
 //

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use bytes::Bytes;
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
+use ratatui_tracing::{EventReceiver, Reloadable};
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::error;
 
@@ -10,8 +11,7 @@ use crate::{
     collector::UpdateReceiver,
     device::Id,
     png_builder::PngSender,
-    ratatui_tracing::{EventReceiver, Reloadable},
-    ui::{components::EventLog, widgets::Display, Action, Component, Config},
+    ui::{components::Log, widgets::Display, Action, Component, Config},
     Columns, PngBuilder, Update,
 };
 
@@ -21,7 +21,7 @@ pub struct Home<'a> {
     config: Config,
     updates: UpdateReceiver,
     png_sender: PngSender,
-    log: EventLog<'a>,
+    log: Log<'a>,
 }
 
 impl<'a> Home<'a> {
@@ -32,7 +32,7 @@ impl<'a> Home<'a> {
         events: EventReceiver,
         reloadable: Reloadable,
     ) -> Self {
-        let log = EventLog::new(events, reloadable);
+        let log = Log::new(events, reloadable);
 
         Self {
             columns,

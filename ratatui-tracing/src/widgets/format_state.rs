@@ -1,13 +1,14 @@
 use ratatui::widgets::TableState;
 use time::UtcOffset;
 
-use crate::ratatui_tracing::widgets::ScopeDisplay;
-use crate::ratatui_tracing::widgets::TimeFormat;
-use crate::LOCAL_OFFSET;
+use crate::{
+    widgets::{ScopeDisplay, TimeFormat},
+    EventReceiver,
+};
 
 #[derive(Clone)]
 pub struct FormatState {
-    pub(crate) local_offset: UtcOffset,
+    pub(crate) local_offset: Option<UtcOffset>,
     display_level: ShowHide,
     pub(crate) display_scope: ScopeDisplay,
     display_scope_fields: ShowHide,
@@ -18,6 +19,13 @@ pub struct FormatState {
 }
 
 impl FormatState {
+    pub fn local_offset(local_offset: UtcOffset) -> Self {
+        Self {
+            local_offset: Some(local_offset),
+            ..Default::default()
+        }
+    }
+
     pub fn as_rows(&self) -> Vec<(&'static str, &'static str)> {
         vec![
             ("Time", self.time.into()),
@@ -54,7 +62,7 @@ impl FormatState {
 
         match selected {
             0 => {
-                self.time = self.time.next();
+                self.time = self.time.next(self.local_offset);
             }
             1 => {
                 self.display_level = self.display_level.next();
@@ -98,7 +106,6 @@ impl FormatState {
 
 impl Default for FormatState {
     fn default() -> Self {
-        let local_offset = *LOCAL_OFFSET.get().expect("init::local_offset() not called");
         let table = TableState::new().with_selected_cell((0, 1));
 
         Self {
@@ -106,11 +113,20 @@ impl Default for FormatState {
             display_scope: Default::default(),
             display_scope_fields: Default::default(),
             display_target: Default::default(),
-            local_offset,
+            local_offset: Default::default(),
             table,
             time: Default::default(),
             wrap: Default::default(),
         }
+    }
+}
+
+impl From<&EventReceiver> for FormatState {
+    fn from(event_receiver: &EventReceiver) -> Self {
+        event_receiver
+            .local_offset
+            .map(Self::local_offset)
+            .unwrap_or_default()
     }
 }
 

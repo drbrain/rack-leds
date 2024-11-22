@@ -1854,6 +1854,7 @@ dependencies = [
  "prometheus-http-query",
  "rand",
  "ratatui",
+ "ratatui-tracing",
  "rstest",
  "serde",
  "serde_json",
@@ -1920,6 +1921,23 @@ dependencies = [
  "unicode-segmentation",
  "unicode-truncate",
  "unicode-width 0.2.0",
+]
+
+[[package]]
+name = "ratatui-tracing"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "eyre",
+ "itertools",
+ "ratatui",
+ "strum",
+ "time",
+ "tokio",
+ "tracing",
+ "tracing-error",
+ "tracing-subscriber",
+ "tui-textarea",
 ]
 
 [[package]]

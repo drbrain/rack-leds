@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, Paragraph, Scrollbar, ScrollbarState, StatefulWidget, Wrap},
 };
 
-use crate::ratatui_tracing::{widgets::EventLogState, Event};
+use crate::{widgets::EventLogState, Event};
 
 pub struct EventLog<'a> {
     block: Option<Block<'a>>,
