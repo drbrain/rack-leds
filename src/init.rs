@@ -156,7 +156,7 @@ fn stdout_layer(gui_active: &Arc<AtomicBool>) -> Box<dyn Layer<Registry> + Send 
 fn ratatui_layer(
     gui_active: &Arc<AtomicBool>,
 ) -> (EventReceiver, Box<dyn Layer<Registry> + Send + Sync>) {
-    let tui = RatatuiTracing::new();
+    let tui = RatatuiTracing::default();
     let reader = tui.subscribe();
     let tui_gui_active = gui_active.clone();
     let tui = tui

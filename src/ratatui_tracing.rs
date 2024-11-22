@@ -27,6 +27,7 @@ use tracing_subscriber::{
     reload, EnvFilter, Layer, Registry,
 };
 
+/// Reloadable [`EnvFilter`] wrapper type
 pub type ReloadHandle = reload::Handle<EnvFilter, Registry>;
 
 pub struct RatatuiTracing {
@@ -35,15 +36,18 @@ pub struct RatatuiTracing {
 }
 
 impl RatatuiTracing {
-    pub fn new() -> Self {
-        let (sender, _) = broadcast::channel(100);
+    /// Create a ratatui tracing layer
+    ///
+    /// Allow `capacity` in-flight events per receiver
+    ///
+    /// The `epoch` is used to determine process start time for relative time formatting in the log
+    pub fn new(capacity: usize, epoch: Instant) -> Self {
+        let (sender, _) = broadcast::channel(capacity);
 
-        Self {
-            sender,
-            epoch: Instant::now(),
-        }
+        Self { sender, epoch }
     }
 
+    /// Subscribe to events recorded by this layer
     pub fn subscribe(&self) -> EventReceiver {
         EventReceiver {
             epoch: self.epoch,
@@ -53,8 +57,9 @@ impl RatatuiTracing {
 }
 
 impl Default for RatatuiTracing {
+    /// A ratatui tracing layer with an epoch of now and storage for 100 in-flight events
     fn default() -> Self {
-        Self::new()
+        Self::new(100, Instant::now())
     }
 }
 
