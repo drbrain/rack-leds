@@ -28,6 +28,37 @@ use tracing_subscriber::{
 /// Reloadable [`EnvFilter`] wrapper type
 pub type ReloadHandle = reload::Handle<EnvFilter, Registry>;
 
+/// A ratuatui [`tracing_subscriber::Layer`] for tracing-subscriber
+///
+/// This layer allows forwarding tracing of events to a ratatui widget.  It can be composed with
+/// [`env_filter()`] to allow editing the filters that forward events to the widget.
+///
+/// To build a tracing layer that forwards events only when the tui is active:
+///
+/// ```
+/// # use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+/// # use tracing_subscriber::filter::filter_fn;
+/// # use self::RatatuiTracing;
+/// let gui_active = Arc::new(AtomicBool::new(false));
+///
+/// let layer = RatatuiTracing::default();
+/// let reader = layer.subscribe();
+///
+/// let tui_gui_active = gui_active.clone();
+/// let layer = layer.with_filter(filter_fn(move |_| {
+///     tui_gui_active.load(Ordering::Relaxed)
+/// })).boxed();
+/// ```
+///
+/// From the example, register `layer` with the tracing-subscriber registry.  Use
+/// [`Layer::with_filter()`] to apply a filter created by [`env_filter()`].
+///
+/// Use `gui_active` to enable sending events when the ratatui applicationis active.  You can apply
+/// an inverse [`tracing_subscriber::filter::filter_fn()`] to a [`tracing_subscriber::fmt::Layer`] to
+/// see events during startup or shutdown when the ratatui application is not active.
+///
+/// Use `reader` with [`widgets::EventLogState`] (and [`widgets::EventLog`]) to display captured
+/// events.
 pub struct RatatuiTracing {
     sender: broadcast::Sender<Event>,
     epoch: Instant,

@@ -1,4 +1,10 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::{
+    io::IsTerminal,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 use crate::{
     ratatui_tracing::{self, EnvFilterResult, EventReceiver, Reloadable},
@@ -7,7 +13,6 @@ use crate::{
 use clap::Parser;
 use color_eyre::config::HookBuilder;
 use eyre::Result;
-use std::{io::IsTerminal, sync::atomic::Ordering};
 use time::UtcOffset;
 use tracing::{error, warn};
 use tracing_error::ErrorLayer;
