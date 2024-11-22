@@ -1,4 +1,5 @@
 mod event;
+mod event_receiver;
 mod history;
 mod reloadable;
 mod scope;
@@ -8,15 +9,12 @@ pub mod widgets;
 use std::{env, time::Instant};
 
 pub use event::Event;
-use eyre::Result;
+pub use event_receiver::EventReceiver;
 pub use history::History;
 pub use reloadable::Reloadable;
 pub use scope::Scope;
 pub use to_scope_visitor::ToScopeVisitor;
-use tokio::sync::broadcast::{
-    self,
-    error::{RecvError, TryRecvError},
-};
+use tokio::sync::broadcast;
 use tracing::{
     level_filters::LevelFilter,
     span::{Attributes, Id, Record},
@@ -30,28 +28,6 @@ use tracing_subscriber::{
 };
 
 pub type ReloadHandle = reload::Handle<EnvFilter, Registry>;
-
-pub struct EventReceiver {
-    pub epoch: Instant,
-    pub channel: broadcast::Receiver<Event>,
-}
-
-impl EventReceiver {
-    pub async fn recv(&mut self) -> Result<Event, RecvError> {
-        self.channel.recv().await
-    }
-
-    pub fn resubscribe(&self) -> Self {
-        EventReceiver {
-            epoch: self.epoch,
-            channel: self.channel.resubscribe(),
-        }
-    }
-
-    pub fn try_recv(&mut self) -> Result<Event, TryRecvError> {
-        self.channel.try_recv()
-    }
-}
 
 pub struct RatatuiTracing {
     sender: broadcast::Sender<Event>,
