@@ -10,9 +10,10 @@ use time::OffsetDateTime;
 use tracing::{Level, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
-use crate::ratatui_tracing::{Scope, ToScopeVisitor};
-
-use super::widgets::{FormatState, ScopeDisplay, TimeFormat};
+use crate::ratatui_tracing::{
+    widgets::{FormatState, ScopeDisplay, TimeFormat},
+    Scope, ToScopeVisitor,
+};
 
 #[derive(Clone)]
 pub struct Event {
