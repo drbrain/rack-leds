@@ -15,6 +15,7 @@ use crate::{
     Scope, ToScopeVisitor,
 };
 
+/// A recorded tracing event
 #[derive(Clone)]
 pub struct Event {
     recorded: Instant,
@@ -28,7 +29,7 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn closed() -> Event {
+    pub(crate) fn closed() -> Event {
         Self {
             recorded: Instant::now(),
             recorded_date_time: OffsetDateTime::now_utc(),
@@ -41,7 +42,7 @@ impl Event {
         }
     }
 
-    pub fn dropped(selected: usize, total: usize) -> Self {
+    pub(crate) fn dropped(selected: usize, total: usize) -> Self {
         let fields = HashMap::from([
             ("selected", format!("{selected}")),
             ("total", format!("{total}")),
@@ -59,7 +60,7 @@ impl Event {
         }
     }
 
-    pub fn missed(count: u64) -> Self {
+    pub(crate) fn missed(count: u64) -> Self {
         let fields = HashMap::from([("count", format!("{count}"))]);
 
         Self {
@@ -74,7 +75,7 @@ impl Event {
         }
     }
 
-    pub fn new(
+    pub(crate) fn new(
         event: &tracing::Event,
         context: &Context<'_, impl Subscriber + for<'a> LookupSpan<'a>>,
     ) -> Self {
@@ -122,15 +123,15 @@ impl Event {
         }
     }
 
-    pub fn have_message_and_fields(&self) -> bool {
+    pub(crate) fn have_message_and_fields(&self) -> bool {
         self.fields.contains_key("message") && !self.fields.len() > 1
     }
 
-    pub fn message(&self) -> Option<String> {
+    pub(crate) fn message(&self) -> Option<String> {
         self.fields.get("message").cloned()
     }
 
-    pub fn to_line(&self, epoch: Instant, format: &FormatState) -> Line<'_> {
+    pub(crate) fn to_line(&self, epoch: Instant, format: &FormatState) -> Line<'_> {
         let mut line = Line::default();
 
         if let Some(time) = format.time.format(self, epoch, format.local_offset) {
@@ -156,7 +157,7 @@ impl Event {
         line
     }
 
-    pub fn to_pretty(&self, epoch: Instant, format: &FormatState) -> Paragraph<'_> {
+    pub(crate) fn to_pretty(&self, epoch: Instant, format: &FormatState) -> Paragraph<'_> {
         let mut lines = vec![];
 
         {
@@ -333,11 +334,11 @@ impl Event {
         line.push_span(Span::styled(":", DIM));
     }
 
-    pub fn recorded(&self) -> Instant {
+    pub(crate) fn recorded(&self) -> Instant {
         self.recorded
     }
 
-    pub fn recorded_date_time(&self) -> OffsetDateTime {
+    pub(crate) fn recorded_date_time(&self) -> OffsetDateTime {
         self.recorded_date_time
     }
 }
