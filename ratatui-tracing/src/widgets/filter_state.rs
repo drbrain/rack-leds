@@ -78,7 +78,7 @@ impl<'a> FilterState<'a> {
         self.view_state = state;
 
         self.filter_edit_state.clear();
-        self.filter_edit_state.insert(directive);
+        self.filter_edit_state.replace(directive);
     }
 
     /// True when the filter is in add mode
