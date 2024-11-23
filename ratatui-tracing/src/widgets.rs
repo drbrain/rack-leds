@@ -18,6 +18,6 @@ pub use filter_edit_state::FilterEditState;
 pub use filter_state::FilterState;
 pub use format::Format;
 pub use format_state::FormatState;
-pub use scope_display::ScopeDisplay;
-pub use time_format::TimeFormat;
+pub(crate) use scope_display::ScopeDisplay;
+pub(crate) use time_format::TimeFormat;
 pub(crate) use view_state::ViewState;

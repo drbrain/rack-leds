@@ -91,7 +91,7 @@ impl<'a> StatefulWidget for EventLog<'a> {
 
                 let event = Paragraph::new(event);
 
-                let event = if state.format.wrap() {
+                let event = if state.format.is_wrap() {
                     event.wrap(Wrap { trim: false })
                 } else {
                     event.scroll((0, state.horizontal_offset))

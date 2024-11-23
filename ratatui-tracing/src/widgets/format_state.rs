@@ -6,6 +6,13 @@ use crate::{
     EventReceiver,
 };
 
+/// State of a [`super::Format`] widget:
+/// * The format of the event time
+/// * Whether the event level is shown
+/// * How many event scopes are shown
+/// * Whether event scope fields are shown
+/// * Whether the event target is shown
+/// * Whether events are wrapped
 #[derive(Clone)]
 pub struct FormatState {
     pub(crate) local_offset: Option<UtcOffset>,
@@ -19,6 +26,7 @@ pub struct FormatState {
 }
 
 impl FormatState {
+    /// Create a [`FormatState`] with a [`UtcOffset`]
     pub fn local_offset(local_offset: UtcOffset) -> Self {
         Self {
             local_offset: Some(local_offset),
@@ -26,7 +34,7 @@ impl FormatState {
         }
     }
 
-    pub fn as_rows(&self) -> Vec<(&'static str, &'static str)> {
+    pub(crate) fn as_rows(&self) -> Vec<(&'static str, &'static str)> {
         vec![
             ("Time", self.time.into()),
             ("Level", self.display_level.into()),
@@ -37,22 +45,29 @@ impl FormatState {
         ]
     }
 
-    pub fn display_target(&self) -> bool {
+    pub(crate) fn display_target(&self) -> bool {
         self.display_target == ShowHide::Show
     }
 
-    pub fn display_scope_fields(&self) -> bool {
+    pub(crate) fn display_scope_fields(&self) -> bool {
         self.display_scope_fields == ShowHide::Show
     }
 
-    pub fn display_level(&self) -> bool {
+    pub(crate) fn display_level(&self) -> bool {
         self.display_level == ShowHide::Show
     }
 
+    /// Returns true if wrapping is enabled
+    pub fn is_wrap(&self) -> bool {
+        self.wrap == OnOff::On
+    }
+
+    /// Select the last row
     pub fn row_last(&mut self) {
         self.table.select_last()
     }
 
+    /// Advance the row to its next state
     pub fn row_edit(&mut self) {
         let selected = self.table.selected();
 
@@ -83,28 +98,29 @@ impl FormatState {
         }
     }
 
+    /// Select the first row
     pub fn row_first(&mut self) {
         self.table.select_first()
     }
 
+    /// Select the next row
     pub fn row_next(&mut self) {
         self.table.select_next()
     }
 
+    /// Select the previous row
     pub fn row_previous(&mut self) {
         self.table.select_previous()
     }
 
-    pub fn wrap(&self) -> bool {
-        self.wrap == OnOff::On
-    }
-
+    /// Toggle wrapping
     pub fn wrap_toggle(&mut self) {
         self.wrap = self.wrap.next();
     }
 }
 
 impl Default for FormatState {
+    /// The default [`FormatState`] uses uptime time format and all other options visibile
     fn default() -> Self {
         let table = TableState::new().with_selected_cell((0, 1));
 

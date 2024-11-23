@@ -102,7 +102,7 @@ impl<'a> EventLogState<'a> {
     }
 
     pub(crate) fn scroll_area_horizontal(&self, area: Rect) -> (Rect, Option<Rect>) {
-        if self.format.wrap() || self.horizontal_offset == 0 {
+        if self.format.is_wrap() || self.horizontal_offset == 0 {
             (area, None)
         } else {
             let [area, scroll_area] =
