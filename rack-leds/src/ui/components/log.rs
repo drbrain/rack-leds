@@ -48,9 +48,17 @@ impl<'a> Log<'a> {
             Layout::vertical([Constraint::Min(2), Constraint::Min(15), Constraint::Fill(1)])
                 .areas(middle);
 
+        let name_suffix = if self.log.filter.is_adding() {
+            " — Add"
+        } else if self.log.filter.is_editing() {
+            " — Edit"
+        } else {
+            ""
+        };
+
         let block = Border::new()
             .horizontal(1)
-            .name("Filters")
+            .name(format!("Filters{name_suffix}"))
             .help("Esc to dismiss")
             .build();
 

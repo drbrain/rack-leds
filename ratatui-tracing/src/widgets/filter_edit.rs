@@ -5,16 +5,43 @@ use ratatui::{
 
 use crate::widgets::FilterEditState;
 
+/// A widget for creating or editing a filter [`tracing_subscriber::filter::Directive`]
 pub struct FilterEdit<'a> {
-    block: Block<'a>,
-    block_help_style: Style,
-    block_title_style: Style,
+    block: Option<Block<'a>>,
     error_text_style: Style,
     input_line_error_style: Style,
     input_line_ok_style: Style,
 }
 
 impl<'a> FilterEdit<'a> {
+    /// Wrap the edit view with a [`Block`] widget
+    pub fn block(mut self, block: Block<'a>) -> Self {
+        self.block = Some(block);
+
+        self
+    }
+
+    /// Set the style for the text of a directive parse error
+    pub fn error_text_style(mut self, style: impl Into<Style>) -> Self {
+        self.error_text_style = style.into();
+
+        self
+    }
+
+    /// Set the input line style when the input is invalid
+    pub fn input_line_error_style(mut self, style: impl Into<Style>) -> Self {
+        self.input_line_error_style = style.into();
+
+        self
+    }
+
+    /// Set the input line style when the input is valid
+    pub fn input_line_ok_style(mut self, style: impl Into<Style>) -> Self {
+        self.input_line_ok_style = style.into();
+
+        self
+    }
+
     fn input_line_style(&self, is_ok: bool) -> Style {
         if is_ok {
             self.input_line_ok_style
@@ -25,21 +52,19 @@ impl<'a> FilterEdit<'a> {
 }
 
 impl<'a> Default for FilterEdit<'a> {
+    /// The default `FilterEdit` has a green input line when valid and a red when invalid.  Error
+    /// text is red.
     fn default() -> Self {
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .padding(Padding::symmetric(1, 0));
 
-        let block_title_style = Style::default().bold();
-        let block_help_style = Style::default().italic();
         let error_text_style = Style::default().fg(Color::Red);
         let input_line_error_style = Style::default().fg(Color::Red);
         let input_line_ok_style = Style::default().fg(Color::Green);
 
         Self {
-            block,
-            block_help_style,
-            block_title_style,
+            block: Some(block),
             error_text_style,
             input_line_error_style,
             input_line_ok_style,
@@ -56,20 +81,20 @@ impl<'a> StatefulWidget for &FilterEdit<'a> {
     {
         Clear.render(area, buf);
 
-        let block = self
-            .block
-            .clone()
-            .title(Line::from("Filters — Add").style(self.block_title_style))
-            .title_bottom(Line::from("Esc to dismiss").style(self.block_help_style));
+        let area = if let Some(block) = &self.block {
+            block.clone().render(area, buf);
+
+            block.inner(area)
+        } else {
+            area
+        };
 
         let [input_area, error_area, _] = Layout::vertical([
             Constraint::Length(2),
             Constraint::Length(1),
             Constraint::Fill(1),
         ])
-        .areas(block.inner(area));
-
-        block.render(area, buf);
+        .areas(area);
 
         let parse_error = state.validate();
 

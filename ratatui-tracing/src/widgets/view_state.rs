@@ -9,8 +9,16 @@ pub(crate) enum ViewState {
 }
 
 impl ViewState {
-    pub fn is_editing(&self) -> bool {
-        matches!(self, ViewState::Add | ViewState::Edit { .. })
+    pub fn is_add(&self) -> bool {
+        matches!(self, ViewState::Add)
+    }
+
+    pub fn is_edit(&self) -> bool {
+        matches!(self, ViewState::Edit { .. })
+    }
+
+    pub fn is_view(&self) -> bool {
+        matches!(self, ViewState::View)
     }
 
     pub fn try_to_add(&self) -> Option<Self> {

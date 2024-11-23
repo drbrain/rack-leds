@@ -81,9 +81,19 @@ impl<'a> FilterState<'a> {
         self.filter_edit_state.insert(directive);
     }
 
-    /// True when the filter is in add or edit mode
+    /// True when the filter is in add mode
+    pub fn is_adding(&self) -> bool {
+        self.view_state.is_add()
+    }
+
+    /// True when the filter is in edit mode
     pub fn is_editing(&self) -> bool {
-        self.view_state.is_editing()
+        self.view_state.is_edit()
+    }
+
+    /// True when the filter is in view mode
+    pub fn is_viewing(&self) -> bool {
+        self.view_state.is_view()
     }
 
     /// Forward a key event to the textarea when in editing mode

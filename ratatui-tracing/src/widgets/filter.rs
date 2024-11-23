@@ -74,11 +74,7 @@ impl<'a> StatefulWidget for Filter<'a> {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Clear.render(area, buf);
 
-        if state.is_editing() {
-            let state = &mut state.filter_edit_state;
-
-            FilterEdit::default().render(area, buf, state);
-        } else {
+        if state.is_viewing() {
             let items: Vec<_> = state
                 .reloadable
                 .directives()
@@ -87,6 +83,13 @@ impl<'a> StatefulWidget for Filter<'a> {
                 .collect();
 
             StatefulWidget::render(self.list(items), area, buf, &mut state.list_state);
+        } else {
+            let state = &mut state.filter_edit_state;
+
+            self.block
+                .map(|block| FilterEdit::default().block(block))
+                .unwrap_or_default()
+                .render(area, buf, state);
         }
     }
 }
