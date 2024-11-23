@@ -7,20 +7,33 @@ use ratatui::{
 
 use crate::{widgets::EventLogState, Event};
 
+/// Widget to display events forwarded to an [`crate::EventReceiver`]
+///
+/// [`EventLog`] is a stateful widget that uses [`EventLogState`] for displaying recent or past
+/// events and selecting an event for a detail view.
 pub struct EventLog<'a> {
     block: Option<Block<'a>>,
     highlight_style: Style,
 }
 
 impl<'a> EventLog<'a> {
+    /// Wrap the log with a [`Block`] widget
     pub fn block(mut self, block: Block<'a>) -> Self {
         self.block = Some(block);
+
+        self
+    }
+
+    /// Set the highlight style for the selected log event
+    pub fn highlight_style(mut self, highlight_style: impl Into<Style>) -> Self {
+        self.highlight_style = highlight_style.into();
 
         self
     }
 }
 
 impl<'a> Default for EventLog<'a> {
+    /// The default `EventLog` uses a [`Color::DarkGray`] [`Self::highlight_style()`]
     fn default() -> Self {
         let highlight_style = Style::default().bg(Color::DarkGray);
 
