@@ -4,6 +4,8 @@ use tracing_subscriber::{filter::Directive, EnvFilter};
 
 use crate::ReloadHandle;
 
+/// [`ReloadHandle`] wrapper used by [`crate::widgets::EventLogState`] to edit the tracing layer
+/// filter
 #[derive(Clone)]
 pub struct Reloadable {
     handle: ReloadHandle,
@@ -12,7 +14,11 @@ pub struct Reloadable {
 }
 
 impl Reloadable {
-    pub fn new(handle: ReloadHandle, default: Directive, mut directives: Vec<Directive>) -> Self {
+    pub(crate) fn new(
+        handle: ReloadHandle,
+        default: Directive,
+        mut directives: Vec<Directive>,
+    ) -> Self {
         directives.sort_by_cached_key(|directive| directive.to_string());
 
         let directives = Arc::new(Mutex::new(directives));
@@ -24,7 +30,7 @@ impl Reloadable {
         }
     }
 
-    pub fn delete(&self, index: usize) {
+    pub(crate) fn delete(&self, index: usize) {
         let updated = {
             let mut directives = self.directives.lock().unwrap();
 
@@ -36,7 +42,7 @@ impl Reloadable {
         self.update_filter(updated);
     }
 
-    pub fn directives(&self) -> Vec<Directive> {
+    pub(crate) fn directives(&self) -> Vec<Directive> {
         let directives = {
             let directives = self.directives.lock().unwrap();
 
@@ -46,7 +52,7 @@ impl Reloadable {
         directives
     }
 
-    pub fn add(&self, directive: Directive) {
+    pub(crate) fn add(&self, directive: Directive) {
         let directives = {
             let mut directives = self.directives.lock().unwrap();
 
