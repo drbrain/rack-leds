@@ -12,11 +12,11 @@ use std::time::Instant;
 pub use env_filter::{env_filter, EnvFilterResult};
 pub use event::Event;
 pub use event_receiver::EventReceiver;
-pub use history::History;
+pub(crate) use history::History;
 pub use reloadable::Reloadable;
-pub use scope::Scope;
+pub(crate) use scope::Scope;
 use time::UtcOffset;
-pub use to_scope_visitor::ToScopeVisitor;
+pub(crate) use to_scope_visitor::ToScopeVisitor;
 use tokio::sync::broadcast;
 use tracing::{
     span::{Attributes, Id, Record},
