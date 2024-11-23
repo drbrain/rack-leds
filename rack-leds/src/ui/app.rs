@@ -324,7 +324,7 @@ fn render_on_update(
                             break;
                         }
                     }
-                    result = events.recv() => {
+                    result = events.has_events() => {
                         if let Err(error) = result {
                             error!(?error, "tracing event sender dropped");
                             break;
