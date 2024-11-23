@@ -81,7 +81,7 @@ impl<'a> Log<'a> {
 
 impl Component for Log<'_> {
     fn init(&mut self, area: Size) -> Result<()> {
-        self.log.set_max_events(area.height.into());
+        self.log.set_max_scrollback(area.height.into());
 
         Ok(())
     }
@@ -163,19 +163,19 @@ impl Component for Log<'_> {
                 self.log.select_previous();
             }
             Action::EventLogScrollLeft => {
-                self.log.scroll_left();
+                self.log.scroll_left(1);
             }
             Action::EventLogScrollLeftBig => {
-                self.log.scroll_left_big();
+                self.log.scroll_left(10);
             }
             Action::EventLogScrollReset => {
                 self.log.scroll_reset();
             }
             Action::EventLogScrollRight => {
-                self.log.scroll_right();
+                self.log.scroll_right(1);
             }
             Action::EventLogScrollRightBig => {
-                self.log.scroll_right_big();
+                self.log.scroll_right(10);
             }
             Action::EventLogTop => {
                 self.log.select_first();
@@ -241,7 +241,7 @@ impl Component for Log<'_> {
                 self.log.filter.key(key);
             }
             Action::Resize(_, height) => {
-                self.log.set_max_events(height.into());
+                self.log.set_max_scrollback(height.into());
             }
             Action::Tick => {
                 self.log.update();
