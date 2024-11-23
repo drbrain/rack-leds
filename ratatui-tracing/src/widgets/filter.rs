@@ -5,15 +5,34 @@ use ratatui::{
 
 use crate::widgets::{FilterEdit, FilterState};
 
+/// Widget to display and edit a tracing filter
+///
+/// [`Filter`] is a stateful widget that uses [`FilterState`] for displaying and editing the filter
+/// directives.
 pub struct Filter<'a> {
     block: Option<Block<'a>>,
-    list_highlight_style: Style,
-    list_highlight_symbol: String,
+    highlight_style: Style,
+    highlight_symbol: String,
 }
 
 impl<'a> Filter<'a> {
+    /// Wrap the log with a [`Block`] widget
     pub fn block(mut self, block: Block<'a>) -> Self {
         self.block = Some(block);
+
+        self
+    }
+
+    /// Set the highlight style for the selected filter directive
+    pub fn highlight_style(mut self, highlight_style: impl Into<Style>) -> Self {
+        self.highlight_style = highlight_style.into();
+
+        self
+    }
+
+    /// Set the symbol to display in front of the selected directive
+    pub fn highlight_symbol(mut self, highlight_symbol: impl ToString) -> Self {
+        self.highlight_symbol = highlight_symbol.to_string();
 
         self
     }
@@ -27,22 +46,24 @@ impl<'a> Filter<'a> {
             list
         };
 
-        list.highlight_symbol(&self.list_highlight_symbol)
+        list.highlight_symbol(&self.highlight_symbol)
             .highlight_spacing(HighlightSpacing::Always)
-            .highlight_style(self.list_highlight_style)
+            .highlight_style(self.highlight_style)
             .direction(ListDirection::TopToBottom)
     }
 }
 
 impl<'a> Default for Filter<'a> {
+    /// The default `Filter` uses a [`Color::Black`] on [`Color::Gray`] highlight style and the
+    /// `"❯"` highlight symbol
     fn default() -> Self {
-        let list_highlight_style = Style::default().bold().fg(Color::Black).bg(Color::Gray);
-        let list_highlight_symbol = "❯".into();
+        let highlight_stely = Style::default().bold().fg(Color::Black).bg(Color::Gray);
+        let highlight_symbol = "❯".into();
 
         Self {
             block: None,
-            list_highlight_style,
-            list_highlight_symbol,
+            highlight_style: highlight_stely,
+            highlight_symbol,
         }
     }
 }
