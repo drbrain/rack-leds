@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use ratatui::{
     prelude::*,
     widgets::{Block, BorderType, Borders, Clear, Padding, Widget},
@@ -104,7 +106,13 @@ impl<'a> StatefulWidget for &FilterEdit<'a> {
             .border_style(self.input_line_style(parse_error.is_none()));
 
         if let Some(parse_error) = parse_error {
-            Line::from(parse_error.to_string())
+            let parse_error = if let Some(source) = parse_error.source() {
+                format!("{}: {}", parse_error, source)
+            } else {
+                parse_error.to_string()
+            };
+
+            Line::from(parse_error)
                 .style(self.error_text_style)
                 .render(error_area, buf);
         }
