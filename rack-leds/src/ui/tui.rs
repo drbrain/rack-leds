@@ -30,7 +30,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, instrument};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, strum::IntoStaticStr, Serialize)]
 pub enum Event {
     Init,
     Quit,

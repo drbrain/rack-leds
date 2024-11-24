@@ -6,7 +6,7 @@ use ratatui::prelude::Rect;
 use ratatui_tracing::{EventReceiver, Reloadable};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{debug, error, instrument, trace, warn};
+use tracing::{debug, error, field, instrument, trace, warn};
 
 use crate::{
     collector::UpdateReceiver,
@@ -142,11 +142,13 @@ impl App {
         Ok(())
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, fields(event = field::Empty))]
     async fn handle_events(&mut self, tui: &mut Tui) -> Result<()> {
         let Some(ref event) = tui.next_event().await else {
             return Ok(());
         };
+
+        tracing::Span::current().record("event", Into::<&'static str>::into(event));
 
         let action_tx = self.action_tx.clone();
 
@@ -156,8 +158,8 @@ impl App {
             Event::Render => action_tx.send(Action::Render)?,
             Event::Resize(x, y) => action_tx.send(Action::Resize(*x, *y))?,
             Event::Key(key) => self.handle_key_event(*key)?,
-            event => {
-                debug!(?event, "unhandled");
+            _ => {
+                debug!("unhandled");
             }
         }
 
@@ -170,7 +172,7 @@ impl App {
         Ok(())
     }
 
-    #[instrument(skip_all, fields(?key))]
+    #[instrument(skip_all, fields(code = ?key.code, modifiers = %key.modifiers))]
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let Some(keymap) = self.config.keybindings.get(&self.mode()) else {
             return Ok(());
