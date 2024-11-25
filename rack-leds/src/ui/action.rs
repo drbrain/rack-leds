@@ -8,6 +8,8 @@ pub enum Action {
     Error(String),
     #[strum(props(Help = "Show detail"))]
     EventLogDetailShow,
+    #[strum(props(Help = "Create filter"))]
+    EventLogFilterCreate,
     #[strum(props(Help = "Last event"))]
     EventLogLast,
     #[strum(props(Help = "Show list"))]
@@ -36,6 +38,18 @@ pub enum Action {
     FilterAdd,
     #[strum(props(Help = "Cancel filter add/edit", Back = "true"))]
     FilterCancel,
+    #[strum(props(Help = "Cancel filter creation"))]
+    FilterCreateCancel,
+    #[strum(props(Help = "Next setting"))]
+    FilterCreateNext,
+    #[strum(props(Help = "Last setting"))]
+    FilterCreateLast,
+    #[strum(props(Help = "Bottom setting"))]
+    FilterCreatePrevious,
+    #[strum(props(Help = "Toggle setting"))]
+    FilterCreateToggle,
+    #[strum(props(Help = "Top setting"))]
+    FilterCreateTop,
     #[strum(props(Help = "Delete filter"))]
     FilterDelete,
     #[strum(props(Help = "Edit filter"))]

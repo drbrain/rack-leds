@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use tracing_subscriber::{filter::Directive, EnvFilter};
 
@@ -6,22 +6,55 @@ use crate::ReloadHandle;
 
 /// [`ReloadHandle`] wrapper used by [`crate::widgets::EventLogState`] to edit the tracing layer
 /// filter
+///
+/// A `Reloadable` wraps a lock for convenient cloning
 #[derive(Clone)]
 pub struct Reloadable {
-    handle: ReloadHandle,
-    default: Directive,
-    directives: Arc<Mutex<Vec<Directive>>>,
+    inner: Arc<RwLock<Inner>>,
 }
 
 impl Reloadable {
     pub(crate) fn new(
         handle: ReloadHandle,
         default: Directive,
-        mut directives: Vec<Directive>,
+        directives: Vec<Directive>,
     ) -> Self {
-        directives.sort_by_cached_key(|directive| directive.to_string());
+        let inner = Inner::new(handle, default, directives);
 
-        let directives = Arc::new(Mutex::new(directives));
+        Self {
+            inner: Arc::new(RwLock::new(inner)),
+        }
+    }
+
+    pub fn add(&mut self, directive: Directive) {
+        let mut inner = self.inner.write().unwrap();
+
+        inner.add(directive);
+    }
+
+    pub(crate) fn delete(&self, index: usize) {
+        let mut inner = self.inner.write().unwrap();
+
+        inner.delete(index);
+    }
+
+    pub(crate) fn directives(&self) -> Vec<Directive> {
+        let inner = self.inner.read().unwrap();
+
+        inner.directives()
+    }
+}
+
+#[derive(Clone)]
+struct Inner {
+    handle: ReloadHandle,
+    default: Directive,
+    directives: Vec<Directive>,
+}
+
+impl Inner {
+    fn new(handle: ReloadHandle, default: Directive, mut directives: Vec<Directive>) -> Self {
+        directives.sort_by_cached_key(|directive| directive.to_string());
 
         Self {
             handle,
@@ -30,48 +63,31 @@ impl Reloadable {
         }
     }
 
-    pub(crate) fn delete(&self, index: usize) {
-        let updated = {
-            let mut directives = self.directives.lock().unwrap();
+    pub fn add(&mut self, directive: Directive) {
+        self.directives.push(directive);
 
-            directives.remove(index);
+        self.directives
+            .sort_by_cached_key(|directive| directive.to_string());
 
-            directives.clone()
-        };
-
-        self.update_filter(updated);
+        self.update_filter();
     }
 
-    pub(crate) fn directives(&self) -> Vec<Directive> {
-        let directives = {
-            let directives = self.directives.lock().unwrap();
+    fn delete(&mut self, index: usize) {
+        self.directives.remove(index);
 
-            directives.clone()
-        };
-
-        directives
+        self.update_filter();
     }
 
-    pub(crate) fn add(&self, directive: Directive) {
-        let directives = {
-            let mut directives = self.directives.lock().unwrap();
-
-            directives.push(directive);
-
-            directives.sort_by_cached_key(|directive| directive.to_string());
-
-            directives.clone()
-        };
-
-        self.update_filter(directives);
+    fn directives(&self) -> Vec<Directive> {
+        self.directives.clone()
     }
 
-    fn update_filter(&self, updated: Vec<Directive>) {
+    fn update_filter(&self) {
         let filter = EnvFilter::builder()
             .with_default_directive(self.default.clone())
             .parse_lossy("");
 
-        let filter = updated.iter().fold(filter, |filter, directive| {
+        let filter = self.directives.iter().fold(filter, |filter, directive| {
             filter.add_directive(directive.clone())
         });
 

@@ -58,6 +58,17 @@ impl<'a> Format<'a> {
         self
     }
 
+    fn rows(&self, rows: Vec<(&'static str, &'static str)>) -> Vec<Row> {
+        rows.into_iter()
+            .map(|(name, value)| {
+                Row::new(vec![
+                    Text::from(name).alignment(Alignment::Left),
+                    Text::from(value).alignment(Alignment::Right),
+                ])
+            })
+            .collect()
+    }
+
     fn table(&'a self, rows: Vec<Row<'a>>) -> Table<'a> {
         let widths = Constraint::from_fills([1, 1]);
 
@@ -108,19 +119,6 @@ impl<'a> Default for Format<'a> {
             row_highlight_style,
             table_style,
         }
-    }
-}
-
-impl<'a> Format<'a> {
-    fn rows(&self, rows: Vec<(&'static str, &'static str)>) -> Vec<Row> {
-        rows.into_iter()
-            .map(|(name, value)| {
-                Row::new(vec![
-                    Text::from(name).alignment(Alignment::Left),
-                    Text::from(value).alignment(Alignment::Right),
-                ])
-            })
-            .collect()
     }
 }
 

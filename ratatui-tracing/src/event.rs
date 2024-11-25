@@ -20,8 +20,8 @@ use crate::{
 pub struct Event {
     recorded: Instant,
     recorded_date_time: OffsetDateTime,
-    scopes: Vec<Scope>,
-    target: String,
+    pub(crate) scopes: Vec<Scope>,
+    pub(crate) target: String,
     level: Level,
     fields: HashMap<&'static str, String>,
     file: Option<String>,

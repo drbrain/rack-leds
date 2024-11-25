@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, Paragraph, Scrollbar, ScrollbarState, StatefulWidget, Wrap},
 };
 
-use crate::{widgets::EventLogState, Event};
+use crate::widgets::{CreateFilter, Detail, EventLogState};
 
 /// Widget to display events forwarded to an [`crate::EventReceiver`]
 ///
@@ -48,8 +48,6 @@ impl<'a> StatefulWidget for EventLog<'a> {
     type State = EventLogState<'a>;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        let total = state.total();
-
         let area = if let Some(block) = self.block {
             let log_area = block.inner(area);
             block.render(area, buf);
@@ -61,23 +59,18 @@ impl<'a> StatefulWidget for EventLog<'a> {
 
         let (area, scroll_area_vertical) = state.scroll_area_vertical(area);
 
-        let mut events = state.history().events();
-
-        let selected = state.history().selected;
-        let epoch = state.epoch();
-
-        if state.is_detail() {
-            let selected = selected.unwrap_or(0);
-
-            let event = events
-                .nth(selected)
-                .map(|(_, event)| event)
-                .cloned()
-                .unwrap_or_else(|| Event::dropped(selected, total).into());
-
-            event.to_pretty(epoch, &state.format).render(area, buf);
+        if let Some(detail_state) = state.detail_state() {
+            Detail::default().render(area, buf, detail_state);
+        } else if let Some(create_filter_state) = state.create_filter_state() {
+            CreateFilter::default().render(area, buf, create_filter_state);
         } else {
-            let events = events.map(|(i, event)| (i, event.to_line(epoch, &state.format)));
+            let selected = state.history().selected;
+            let epoch = state.epoch();
+
+            let events = state
+                .history()
+                .events()
+                .map(|(i, event)| (i, event.to_line(epoch, &state.format)));
 
             let (area, scroll_area_horizontal) = state.scroll_area_horizontal(area);
 

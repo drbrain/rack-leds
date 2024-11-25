@@ -1,5 +1,6 @@
 [keybindings]
 [keybindings.EventLogDetail]
+"<?>"      = "HelpShow"
 "<Ctrl-c>" = "Quit"
 "<Ctrl-d>" = "Quit"
 "<Ctrl-z>" = "Suspend"
@@ -7,9 +8,9 @@
 "<End>"    = "EventLogLast"
 "<Esc>"    = "EventLogListShow"
 "<Home>"   = "EventLogTop"
-"<q>"      = "Quit"
 "<Up>"     = "EventLogPrevious"
-"<?>"      = "HelpShow"
+"<c>"      = "EventLogFilterCreate"
+"<q>"      = "Quit"
 
 [keybindings.Filter]
 "<a>"         = "FilterAdd"
@@ -25,6 +26,12 @@
 "<q>"         = "Quit"
 "<Up>"        = "FilterPrevious"
 "<?>"         = "HelpShow"
+
+[keybindings.EventLogFilterCreate]
+"<?>"     = "HelpShow"
+"<Tab>"   = "FilterCreateNext"
+"<Esc>"   = "FilterCreateCancel"
+"<Enter>" = "FilterCreateToggle"
 
 [keybindings.FilterEdit]
 "<Enter>" = "FilterSubmit"

@@ -1,4 +1,7 @@
-use std::collections::{hash_map::Iter, HashMap};
+use std::collections::{
+    hash_map::{Iter, Keys},
+    HashMap,
+};
 
 #[derive(Clone, Debug)]
 pub struct Scope {
@@ -13,6 +16,10 @@ impl Scope {
 
     pub fn extend(&mut self, other: Self) {
         self.fields.extend(other.fields);
+    }
+
+    pub fn field_names(&self) -> Keys<'_, &str, String> {
+        self.fields.keys()
     }
 
     pub fn fields(&self) -> Iter<'_, &str, String> {

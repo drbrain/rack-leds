@@ -41,6 +41,8 @@ pub struct App {
 pub enum Mode {
     #[default]
     Home,
+    #[strum(serialize = "Create filter")]
+    EventLogFilterCreate,
     #[strum(serialize = "Event log detail")]
     EventLogDetail,
     #[strum(serialize = "Filter")]
@@ -218,6 +220,9 @@ impl App {
                 Action::EventLogDetailShow => {
                     self.set_mode(Mode::EventLogDetail);
                 }
+                Action::EventLogFilterCreate => {
+                    self.set_mode(Mode::EventLogFilterCreate);
+                }
                 Action::EventLogListShow | Action::FilterHide | Action::FormatHide => {
                     self.set_mode(Mode::Home);
                 }
@@ -226,6 +231,9 @@ impl App {
                 }
                 Action::FilterCancel | Action::FilterShow | Action::FilterSubmit => {
                     self.set_mode(Mode::Filter);
+                }
+                Action::FilterCreateCancel => {
+                    self.set_mode(Mode::EventLogDetail);
                 }
                 Action::FormatShow => {
                     self.set_mode(Mode::Format);

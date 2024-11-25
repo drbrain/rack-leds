@@ -85,24 +85,24 @@ impl History {
         self.selected = index;
     }
 
-    pub fn select_first(&mut self) {
-        self.select(Some(usize::MAX));
-    }
-
-    pub fn select_last(&mut self) {
-        self.select(Some(0));
-    }
-
-    pub fn select_next(&mut self) {
+    pub fn select_newer(&mut self) {
         let next = self.selected.map_or(0, |i| i.saturating_sub(1));
 
         self.select(Some(next));
     }
 
-    pub fn select_previous(&mut self) {
+    pub fn select_newest(&mut self) {
+        self.select(Some(0));
+    }
+
+    pub fn select_older(&mut self) {
         let next = self.selected.map_or(0, |i| i.saturating_add(1));
 
         self.select(Some(next));
+    }
+
+    pub fn select_oldest(&mut self) {
+        self.select(Some(usize::MAX));
     }
 
     pub fn set_capacity(&mut self, capacity: usize) {

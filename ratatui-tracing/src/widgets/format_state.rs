@@ -2,7 +2,7 @@ use ratatui::widgets::TableState;
 use time::UtcOffset;
 
 use crate::{
-    widgets::{ScopeDisplay, TimeFormat},
+    widgets::{OnOff, ScopeDisplay, TimeFormat},
     EventReceiver,
 };
 
@@ -143,22 +143,6 @@ impl From<&EventReceiver> for FormatState {
             .local_offset
             .map(Self::local_offset)
             .unwrap_or_default()
-    }
-}
-
-#[derive(Clone, Copy, Default, strum::IntoStaticStr, PartialEq)]
-enum OnOff {
-    #[default]
-    On,
-    Off,
-}
-
-impl OnOff {
-    fn next(&self) -> OnOff {
-        match self {
-            OnOff::On => OnOff::Off,
-            OnOff::Off => OnOff::On,
-        }
     }
 }
 

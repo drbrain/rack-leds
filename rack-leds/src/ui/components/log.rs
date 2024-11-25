@@ -155,20 +155,23 @@ impl Component for Log<'_> {
             Action::EventLogDetailShow => {
                 self.log.detail_show();
             }
+            Action::EventLogFilterCreate => {
+                self.log.create_filter();
+            }
             Action::EventLogSelectClear => {
                 self.log.select_clear();
             }
             Action::EventLogLast => {
-                self.log.select_last();
+                self.log.select_newest();
             }
             Action::EventLogListShow => {
                 self.log.list_show();
             }
             Action::EventLogNext => {
-                self.log.select_next();
+                self.log.select_newer();
             }
             Action::EventLogPrevious => {
-                self.log.select_previous();
+                self.log.select_older();
             }
             Action::EventLogScrollLeft => {
                 self.log.scroll_left(1);
@@ -186,7 +189,7 @@ impl Component for Log<'_> {
                 self.log.scroll_right(10);
             }
             Action::EventLogTop => {
-                self.log.select_first();
+                self.log.select_oldest();
             }
             Action::EventLogWrapToggle => {
                 self.log.wrap_toggle();
@@ -197,6 +200,14 @@ impl Component for Log<'_> {
             Action::FilterCancel => {
                 self.log.filter.cancel();
             }
+            Action::FilterCreateCancel => {
+                self.log.detail_show();
+            }
+            Action::FilterCreateLast => todo!(),
+            Action::FilterCreateNext => self.log.filter_create_next(),
+            Action::FilterCreatePrevious => todo!(),
+            Action::FilterCreateToggle => self.log.filter_create_toggle(),
+            Action::FilterCreateTop => todo!(),
             Action::FilterDelete => {
                 self.log.filter.delete_selected();
             }
